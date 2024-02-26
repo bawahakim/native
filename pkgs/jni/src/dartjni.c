@@ -747,3 +747,11 @@ Java_com_github_dart_1lang_jni_PortCleaner_clean(JNIEnv* env,
   close_signal.type = Dart_CObject_kNull;
   Dart_PostCObject_DL(port, &close_signal);
 }
+
+JNIEXPORT jlong JNICALL
+Java_com_github_dart_1lang_jni_JniUtils_globalReferenceAddressOf(JNIEnv* env,
+                                                                 jclass clazz,
+                                                                 jobject o) {
+  attach_thread();
+  return (jlong)((*env)->NewGlobalRef(env, o));
+}
