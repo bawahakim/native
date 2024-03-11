@@ -187,6 +187,23 @@ class CBuilder implements Builder {
         installName = null,
         pic = pie;
 
+  CBuilder.link({
+    required this.name,
+    required this.assetId,
+    this.sources = const [],
+    this.includes = const [],
+    this.dartBuildFiles = const ['build.dart'],
+    @visibleForTesting this.installName,
+    this.flags = const [],
+    this.defines = const {},
+    this.buildModeDefine = true,
+    this.ndebugDefine = true,
+    this.pic = true,
+    this.std,
+    this.language = Language.c,
+    this.cppLinkStdLib,
+  }) : _type = _CBuilderType.library;
+
   /// Runs the C Compiler with on this C build spec.
   ///
   /// Completes with an error if the build fails.
