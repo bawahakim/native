@@ -107,10 +107,19 @@ class CompilerResolver {
 
   Future<ToolInstance?> _tryLoadToolFromNativeToolchain(Tool tool) async {
     final resolved = (await tool.defaultResolver!.resolve(logger: logger))
-        .where((i) => i.tool == tool)
+        .where((i) => i.tool.name == tool.name)
         .toList()
       ..sort();
-    return resolved.isEmpty ? null : resolved.first;
+    final ToolInstance? toolInstance;
+    if (resolved.isEmpty) {
+      return null;
+    }
+    toolInstance = resolved.first;
+    return ToolInstance(
+      tool: tool, //Hack, this should be cleaned up. DO_NOT_SUBMIT
+      uri: toolInstance.uri,
+      version: toolInstance.version,
+    );
   }
 
   Future<ToolInstance> resolveArchiver() async {

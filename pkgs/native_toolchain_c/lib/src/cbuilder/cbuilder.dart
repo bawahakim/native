@@ -134,6 +134,12 @@ class CBuilder implements Builder {
   /// | Fuchsia | `c++`        |
   final String? cppLinkStdLib;
 
+  final List<String> linkerFlags;
+
+  final bool link;
+
+  Uri? staticArchive;
+
   CBuilder.library({
     required this.name,
     required this.assetId,
@@ -149,7 +155,9 @@ class CBuilder implements Builder {
     this.std,
     this.language = Language.c,
     this.cppLinkStdLib,
-  }) : _type = _CBuilderType.library;
+  })  : _type = _CBuilderType.library,
+        linkerFlags = [],
+        link = false;
 
   CBuilder.executable({
     required this.name,
@@ -167,7 +175,9 @@ class CBuilder implements Builder {
   })  : _type = _CBuilderType.executable,
         assetId = null,
         installName = null,
-        pic = pie;
+        pic = pie,
+        linkerFlags = [],
+        link = false;
 
   CBuilder.link({
     required this.name,
@@ -184,8 +194,20 @@ class CBuilder implements Builder {
     this.std,
     this.language = Language.c,
     this.cppLinkStdLib,
-    required String linkerScript,
-  }) : _type = _CBuilderType.library;
+    Uri? linkerScript,
+    List<String>? linkerFlags,
+    bool gcSections = true,
+    this.staticArchive,
+  })  : _type = _CBuilderType.library,
+        linkerFlags = linkerFlags ?? [],
+        link = true {
+    if (linkerScript != null) {
+      this.linkerFlags.add('--version-script=$linkerScript');
+    }
+    if (gcSections) {
+      this.linkerFlags.add('--gc-sections');
+    }
+  }
 
   /// Runs the C Compiler with on this C build spec.
   ///
@@ -231,7 +253,7 @@ class CBuilder implements Builder {
                 : null,
         executable: _type == _CBuilderType.executable ? exeUri : null,
         installName: installName,
-        flags: flags,
+        flags: [...flags, ...linkerFlags.map((e) => '-Wl,$e')],
         defines: {
           ...defines,
           if (buildModeDefine) buildConfig.buildMode.name.toUpperCase(): null,
@@ -242,6 +264,8 @@ class CBuilder implements Builder {
         std: std,
         language: language,
         cppLinkStdLib: cppLinkStdLib,
+        link: link,
+        staticArchive: staticArchive,
       );
       await task.run();
     }

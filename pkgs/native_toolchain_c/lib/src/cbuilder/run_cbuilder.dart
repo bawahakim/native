@@ -7,11 +7,8 @@ import 'dart:math';
 import 'package:logging/logging.dart';
 import 'package:native_assets_cli/native_assets_cli.dart';
 
-import '../native_toolchain/apple_clang.dart';
-import '../native_toolchain/clang.dart';
-import '../native_toolchain/gcc.dart';
-import '../native_toolchain/msvc.dart';
 import '../native_toolchain/xcode.dart';
+import '../tool/tool.dart';
 import '../tool/tool_instance.dart';
 import '../utils/env_from_bat.dart';
 import '../utils/run_process.dart';
@@ -42,6 +39,9 @@ class RunCBuilder {
   final String? std;
   final Language language;
   final String? cppLinkStdLib;
+  final Uri? linkerScript;
+  final bool link;
+  final Uri? staticArchive;
 
   RunCBuilder({
     required this.buildConfig,
@@ -58,12 +58,17 @@ class RunCBuilder {
     this.std,
     this.language = Language.c,
     this.cppLinkStdLib,
+    this.linkerScript,
+    this.link = false,
+    this.staticArchive,
   })  : outDir = buildConfig.outDir,
         target = buildConfig.target,
         assert([executable, dynamicLibrary, staticLibrary]
                 .whereType<Uri>()
                 .length ==
-            1) {
+            1),
+        assert(
+            link == true || (linkerScript == null && staticArchive == null)) {
     if (target.os == OS.windows && cppLinkStdLib != null) {
       throw ArgumentError.value(
         cppLinkStdLib,
@@ -78,7 +83,9 @@ class RunCBuilder {
 
   Future<ToolInstance> compiler() async => await _resolver.resolveCompiler();
 
-  Future<Uri> archiver() async => (await _resolver.resolveArchiver()).uri;
+  Future<ToolInstance> linker() async => await _resolver.resolveLinker();
+
+  Future<ToolInstance> archiver() async => await _resolver.resolveArchiver();
 
   Future<Uri> iosSdk(IOSSdk iosSdk, {required Logger? logger}) async {
     if (iosSdk == IOSSdk.iPhoneOs) {
@@ -104,15 +111,13 @@ class RunCBuilder {
       compiler.uri.resolve('../sysroot/');
 
   Future<void> run() async {
-    final compiler_ = await compiler();
+    final compiler_ = link ? await linker() : await compiler();
     final compilerTool = compiler_.tool;
-    if (compilerTool == appleClang ||
-        compilerTool == clang ||
-        compilerTool == gcc) {
+    if (compilerTool.flavor == Flavor.clang) {
       await runClangLike(compiler: compiler_);
       return;
     }
-    assert(compilerTool == cl);
+    assert(compilerTool.flavor == Flavor.mscv);
     await runCl(compiler: compiler_);
   }
 
@@ -120,7 +125,7 @@ class RunCBuilder {
     final isStaticLib = staticLibrary != null;
     Uri? archiver_;
     if (isStaticLib) {
-      archiver_ = await archiver();
+      archiver_ = (await archiver()).uri;
     }
 
     late final IOSSdk targetIosSdk;
@@ -209,6 +214,8 @@ class RunCBuilder {
           '-o',
           outDir.resolve('out.o').toFilePath(),
         ],
+        if (linkerScript != null) ...['-Wl,${linkerScript!.toFilePath()}'],
+        if (link) staticArchive!.toFilePath(),
       ],
       logger: logger,
       captureOutput: false,
@@ -238,7 +245,7 @@ class RunCBuilder {
     final isStaticLib = staticLibrary != null;
     Uri? archiver_;
     if (isStaticLib) {
-      archiver_ = await archiver();
+      archiver_ = (await archiver()).uri;
     }
 
     final result = await runProcess(
