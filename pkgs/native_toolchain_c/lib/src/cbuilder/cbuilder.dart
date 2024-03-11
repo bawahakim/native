@@ -264,7 +264,7 @@ class CBuilder implements Builder {
         std: std,
         language: language,
         cppLinkStdLib: cppLinkStdLib,
-        link: link,
+        runLinker: link,
         staticArchive: staticArchive,
       );
       await task.run();

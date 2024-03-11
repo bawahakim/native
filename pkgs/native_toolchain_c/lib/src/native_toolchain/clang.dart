@@ -10,7 +10,6 @@ import '../tool/tool_resolver.dart';
 /// https://clang.llvm.org/
 final Tool clang = Tool(
   name: 'Clang',
-  flavor: Flavor.clang,
   defaultResolver: CliVersionResolver(
     wrappedResolver: CliFilter(
       cliArguments: ['--version'],
@@ -28,7 +27,6 @@ final Tool clang = Tool(
 /// https://llvm.org/docs/CommandGuide/llvm-ar.html
 final Tool llvmAr = Tool(
   name: 'LLVM archiver',
-  flavor: Flavor.clang,
   defaultResolver: CliVersionResolver(
     wrappedResolver: ToolResolvers([
       RelativeToolResolver(
@@ -45,7 +43,6 @@ final Tool llvmAr = Tool(
 /// https://lld.llvm.org/
 final Tool lld = Tool(
   name: 'LLD',
-  flavor: Flavor.clang,
   defaultResolver: CliVersionResolver(
     wrappedResolver: ToolResolvers([
       RelativeToolResolver(

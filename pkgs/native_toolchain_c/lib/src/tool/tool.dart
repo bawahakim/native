@@ -9,26 +9,17 @@ class Tool {
 
   ToolResolver? defaultResolver;
 
-  Flavor? flavor;
-
   Tool({
     required this.name,
-    this.flavor,
     this.defaultResolver,
   });
 
   @override
-  bool operator ==(Object other) =>
-      other is Tool && name == other.name && flavor == other.flavor;
+  bool operator ==(Object other) => other is Tool && name == other.name;
 
   @override
-  int get hashCode => Object.hash(name, flavor?.index, 133709);
+  int get hashCode => Object.hash(name, 133709);
 
   @override
   String toString() => 'Tool($name)';
-}
-
-enum Flavor {
-  clang,
-  mscv,
 }

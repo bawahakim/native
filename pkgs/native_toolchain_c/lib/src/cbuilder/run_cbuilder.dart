@@ -7,8 +7,11 @@ import 'dart:math';
 import 'package:logging/logging.dart';
 import 'package:native_assets_cli/native_assets_cli.dart';
 
+import '../native_toolchain/apple_clang.dart';
+import '../native_toolchain/clang.dart';
+import '../native_toolchain/gcc.dart';
+import '../native_toolchain/msvc.dart';
 import '../native_toolchain/xcode.dart';
-import '../tool/tool.dart';
 import '../tool/tool_instance.dart';
 import '../utils/env_from_bat.dart';
 import '../utils/run_process.dart';
@@ -40,7 +43,7 @@ class RunCBuilder {
   final Language language;
   final String? cppLinkStdLib;
   final Uri? linkerScript;
-  final bool link;
+  final bool runLinker;
   final Uri? staticArchive;
 
   RunCBuilder({
@@ -59,7 +62,7 @@ class RunCBuilder {
     this.language = Language.c,
     this.cppLinkStdLib,
     this.linkerScript,
-    this.link = false,
+    this.runLinker = false,
     this.staticArchive,
   })  : outDir = buildConfig.outDir,
         target = buildConfig.target,
@@ -67,8 +70,8 @@ class RunCBuilder {
                 .whereType<Uri>()
                 .length ==
             1),
-        assert(
-            link == true || (linkerScript == null && staticArchive == null)) {
+        assert(runLinker == true ||
+            (linkerScript == null && staticArchive == null)) {
     if (target.os == OS.windows && cppLinkStdLib != null) {
       throw ArgumentError.value(
         cppLinkStdLib,
@@ -111,14 +114,29 @@ class RunCBuilder {
       compiler.uri.resolve('../sysroot/');
 
   Future<void> run() async {
-    final compiler_ = link ? await linker() : await compiler();
-    final compilerTool = compiler_.tool;
-    if (compilerTool.flavor == Flavor.clang) {
-      await runClangLike(compiler: compiler_);
-      return;
+    if (runLinker) {
+      final linker_ = await linker();
+      final linkerTool = linker_.tool;
+      if (linkerTool == appleClang ||
+          linkerTool == clang ||
+          linkerTool == gcc) {
+        await runClangLike(compiler: linker_);
+        return;
+      }
+      assert(linkerTool == link);
+      await runCl(compiler: linker_);
+    } else {
+      final compiler_ = await compiler();
+      final compilerTool = compiler_.tool;
+      if (compilerTool == appleClang ||
+          compilerTool == clang ||
+          compilerTool == gcc) {
+        await runClangLike(compiler: compiler_);
+        return;
+      }
+      assert(compilerTool == cl);
+      await runCl(compiler: compiler_);
     }
-    assert(compilerTool.flavor == Flavor.mscv);
-    await runCl(compiler: compiler_);
   }
 
   Future<void> runClangLike({required ToolInstance compiler}) async {
@@ -215,7 +233,7 @@ class RunCBuilder {
           outDir.resolve('out.o').toFilePath(),
         ],
         if (linkerScript != null) ...['-Wl,${linkerScript!.toFilePath()}'],
-        if (link) staticArchive!.toFilePath(),
+        if (runLinker) staticArchive!.toFilePath(),
       ],
       logger: logger,
       captureOutput: false,

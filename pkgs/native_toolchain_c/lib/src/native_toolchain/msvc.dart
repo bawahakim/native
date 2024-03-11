@@ -261,7 +261,6 @@ Tool _msvcTool({
   }
   return Tool(
     name: executableName,
-    flavor: Flavor.mscv,
     defaultResolver: resolver,
   );
 }

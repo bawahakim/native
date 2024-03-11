@@ -10,7 +10,6 @@ import '../tool/tool_resolver.dart';
 /// https://developer.apple.com/xcode/
 final Tool appleClang = Tool(
   name: 'Apple Clang',
-  flavor: Flavor.clang,
   defaultResolver: CliVersionResolver(
     wrappedResolver: CliFilter(
       cliArguments: ['--version'],
@@ -26,7 +25,6 @@ final Tool appleClang = Tool(
 /// The archiver belonging to [appleClang].
 final Tool appleAr = Tool(
   name: 'Apple archiver',
-  flavor: Flavor.clang,
   defaultResolver: ToolResolvers([
     RelativeToolResolver(
       toolName: 'Apple archiver',
@@ -39,7 +37,6 @@ final Tool appleAr = Tool(
 /// The linker belonging to [appleClang].
 final Tool appleLd = Tool(
   name: 'Apple linker',
-  flavor: Flavor.clang,
   defaultResolver: ToolResolvers([
     RelativeToolResolver(
       toolName: 'Apple linker',
@@ -54,7 +51,6 @@ final Tool appleLd = Tool(
 /// https://llvm.org/docs/CommandGuide/llvm-otool.html
 final Tool otool = Tool(
   name: 'otool',
-  flavor: Flavor.clang,
   defaultResolver: CliVersionResolver(
     wrappedResolver: PathToolResolver(
       toolName: 'otool',

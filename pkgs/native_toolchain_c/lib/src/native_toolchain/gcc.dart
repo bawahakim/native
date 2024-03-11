@@ -18,7 +18,7 @@ final gnuArchiver = Tool(name: 'GNU archiver');
 /// The GNU linker for [Architecture.current].
 ///
 /// https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/ld.html
-final gnuLinker = Tool(name: 'GNU linker', flavor: Flavor.clang);
+final gnuLinker = Tool(name: 'GNU linker');
 
 /// [gcc] with [Tool.defaultResolver] for [Architecture.ia32].
 final i686LinuxGnuGcc = _gcc('i686-linux-gnu');
@@ -67,7 +67,6 @@ final riscv64LinuxGnuLd = _gnuLinker('riscv64-linux-gnu');
 
 Tool _gcc(String prefix) => Tool(
       name: gcc.name,
-      flavor: Flavor.clang,
       defaultResolver: CliVersionResolver(
         wrappedResolver: PathToolResolver(
           toolName: gcc.name,
@@ -80,7 +79,6 @@ Tool _gnuArchiver(String prefix) {
   final gcc = _gcc(prefix);
   return Tool(
     name: gnuArchiver.name,
-    flavor: Flavor.clang,
     defaultResolver: RelativeToolResolver(
       toolName: gnuArchiver.name,
       wrappedResolver: gcc.defaultResolver!,
@@ -93,7 +91,6 @@ Tool _gnuLinker(String prefix) {
   final gcc = _gcc(prefix);
   return Tool(
     name: gnuLinker.name,
-    flavor: Flavor.clang,
     defaultResolver: RelativeToolResolver(
       toolName: gnuLinker.name,
       wrappedResolver: gcc.defaultResolver!,
