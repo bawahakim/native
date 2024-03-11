@@ -17,9 +17,9 @@ void main() {
     final builder = CBuilder.link(
       name: 'mylibname',
       assetId: 'assetId',
-      staticArchive: Uri.file('test/cbuilder/testfiles/linker/libicu_capi.a'),
+      staticArchive: Uri.file('test/cbuilder/testfiles/linker/test.a'),
       linkerScript: Uri.file('test/cbuilder/testfiles/linker/symbols.lds'),
-      flags: ['-u', 'ICU4XFixedDecimal_create_from_i32'],
+      flags: ['-u', 'my_other_func'],
       linkerFlags: ['-strip-debug'],
     );
 
@@ -43,9 +43,9 @@ void main() {
 
     final filePath =
         (buildOutput.assets.first.path as AssetAbsolutePath).uri.toFilePath();
-    final filesize = Process.runSync('du', ['-sh', filePath]).stdout;
+    // final filesize = Process.runSync('du', ['-sh', filePath]).stdout;
     final elf = Process.runSync('readelf', ['-WCs', filePath]).stdout;
-    print(filesize);
-    print(elf);
+    expect(elf, contains('my_other_func'));
+    expect(elf, isNot(contains('my_func')));
   });
 }

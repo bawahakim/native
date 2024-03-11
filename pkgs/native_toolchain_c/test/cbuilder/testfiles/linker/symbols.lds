@@ -1,6 +1,6 @@
 {
   global:
-    ICU4XFixedDecimal_create_from_i32;
+    my_other_func;
   local:
     *;
 };
