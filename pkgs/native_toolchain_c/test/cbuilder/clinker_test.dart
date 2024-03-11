@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:native_assets_cli/native_assets_cli.dart';
 import 'package:native_toolchain_c/native_toolchain_c.dart';
+import 'package:native_toolchain_c/src/utils/run_process.dart';
 import 'package:test/test.dart';
 
 import '../helpers.dart';
@@ -44,7 +45,12 @@ void main() {
     final filePath =
         (buildOutput.assets.first.path as AssetAbsolutePath).uri.toFilePath();
     // final filesize = Process.runSync('du', ['-sh', filePath]).stdout;
-    final elf = Process.runSync('readelf', ['-WCs', filePath]).stdout;
+    final result = await runProcess(
+      executable: Uri.file('readelf'),
+      arguments: ['-WCs', filePath],
+      logger: logger,
+    );
+    final elf = result.stdout;
     expect(elf, contains('my_other_func'));
     expect(elf, isNot(contains('my_func')));
   });
