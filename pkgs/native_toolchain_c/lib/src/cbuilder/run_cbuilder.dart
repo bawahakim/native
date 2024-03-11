@@ -42,9 +42,7 @@ class RunCBuilder {
   final String? std;
   final Language language;
   final String? cppLinkStdLib;
-  final Uri? linkerScript;
-  final bool runLinker;
-  final Uri? staticArchive;
+  final Uri? linkInput;
 
   RunCBuilder({
     required this.buildConfig,
@@ -61,17 +59,13 @@ class RunCBuilder {
     this.std,
     this.language = Language.c,
     this.cppLinkStdLib,
-    this.linkerScript,
-    this.runLinker = false,
-    this.staticArchive,
+    this.linkInput,
   })  : outDir = buildConfig.outDir,
         target = buildConfig.target,
         assert([executable, dynamicLibrary, staticLibrary]
                 .whereType<Uri>()
                 .length ==
-            1),
-        assert(runLinker == true ||
-            (linkerScript == null && staticArchive == null)) {
+            1) {
     if (target.os == OS.windows && cppLinkStdLib != null) {
       throw ArgumentError.value(
         cppLinkStdLib,
@@ -114,7 +108,7 @@ class RunCBuilder {
       compiler.uri.resolve('../sysroot/');
 
   Future<void> run() async {
-    if (runLinker) {
+    if (linkInput != null) {
       final linker_ = await linker();
       final linkerTool = linker_.tool;
       if (linkerTool == appleClang ||
@@ -232,8 +226,7 @@ class RunCBuilder {
           '-o',
           outDir.resolve('out.o').toFilePath(),
         ],
-        if (linkerScript != null) ...['-Wl,${linkerScript!.toFilePath()}'],
-        if (runLinker) staticArchive!.toFilePath(),
+        if (linkInput != null) linkInput!.toFilePath(),
       ],
       logger: logger,
       captureOutput: false,
