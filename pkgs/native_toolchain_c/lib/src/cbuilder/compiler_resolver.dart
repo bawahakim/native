@@ -189,6 +189,81 @@ class CompilerResolver {
     return null;
   }
 
+  Future<ToolInstance> resolveLinker() async {
+    // First, check if the launcher provided a direct path to the compiler.
+    var result = await _tryLoadLinkerFromConfig();
+
+    // Then, try to detect on the host machine.
+    final tool = _selectLinker();
+    if (tool != null) {
+      result ??= await _tryLoadToolFromNativeToolchain(tool);
+    }
+
+    if (result != null) {
+      return result;
+    }
+
+    final targetOs = buildConfig.targetOs;
+    final targetArchitecture = buildConfig.targetArchitecture;
+    final errorMessage = "No tools configured on host '$host' with target "
+        "'${targetOs}_$targetArchitecture'.";
+    logger?.severe(errorMessage);
+    throw ToolError(errorMessage);
+  }
+
+  Future<ToolInstance?> _tryLoadLinkerFromConfig() async {
+    final configLdUri = buildConfig.cCompiler.ld;
+    if (configLdUri != null) {
+      assert(await File.fromUri(configLdUri).exists());
+      logger?.finer('Using linker ${configLdUri.toFilePath()} '
+          'from BuildConfig.cCompiler.ld.');
+      return (await LinkerRecognizer(configLdUri).resolve(logger: logger))
+          .first;
+    }
+    logger?.finer('No linker set in BuildConfig.cCompiler.ld.');
+    return null;
+  }
+
+  /// Select the right compiler for cross compiling to the specified target.
+  Tool? _selectLinker() {
+    final targetOs = buildConfig.targetOs;
+    final targetArch = buildConfig.targetArchitecture;
+
+    // TODO(dacoharkes): Support falling back on other tools.
+    if (targetArch == host.architecture &&
+        targetOs == host.os &&
+        host.os == OS.linux) return clang;
+    if (targetOs == OS.macOS || targetOs == OS.iOS) return appleClang;
+    if (targetOs == OS.android) return androidNdkClang;
+    if (host.os == OS.linux) {
+      switch (targetArch) {
+        case Architecture.arm:
+          return armLinuxGnueabihfLd;
+        case Architecture.arm64:
+          return aarch64LinuxGnuLd;
+        case Architecture.ia32:
+          return i686LinuxGnuLd;
+        case Architecture.x64:
+          return x86_64LinuxGnuLd;
+        case Architecture.riscv64:
+          return riscv64LinuxGnuLd;
+      }
+    }
+
+    if (host.os == OS.windows) {
+      switch (targetArch) {
+        case Architecture.ia32:
+          return linkIA32;
+        case Architecture.arm64:
+          return linkArm64;
+        case Architecture.x64:
+          return link;
+      }
+    }
+
+    return null;
+  }
+
   Future<Uri?> toolchainEnvironmentScript(ToolInstance compiler) async {
     final fromConfig = buildConfig.cCompiler.envScript;
     if (fromConfig != null) {
