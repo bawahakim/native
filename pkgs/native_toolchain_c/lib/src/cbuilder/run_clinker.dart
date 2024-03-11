@@ -25,7 +25,6 @@ class RunCLinker {
   final List<Uri> includes;
   final Uri? executable;
   final Uri? dynamicLibrary;
-  final Uri? staticLibrary;
   final Uri outDir;
   final Target target;
 
@@ -50,7 +49,6 @@ class RunCLinker {
     this.includes = const [],
     this.executable,
     this.dynamicLibrary,
-    this.staticLibrary,
     this.installName,
     this.flags = const [],
     this.defines = const {},
@@ -60,10 +58,7 @@ class RunCLinker {
     this.cppLinkStdLib,
   })  : outDir = buildConfig.outDir,
         target = buildConfig.target,
-        assert([executable, dynamicLibrary, staticLibrary]
-                .whereType<Uri>()
-                .length ==
-            1) {
+        assert((executable == null) ^ (dynamicLibrary != null)) {
     if (target.os == OS.windows && cppLinkStdLib != null) {
       throw ArgumentError.value(
         cppLinkStdLib,
@@ -77,8 +72,6 @@ class RunCLinker {
       CompilerResolver(buildConfig: buildConfig, logger: logger);
 
   Future<ToolInstance> compiler() async => await _resolver.resolveCompiler();
-
-  Future<Uri> archiver() async => (await _resolver.resolveArchiver()).uri;
 
   Future<Uri> iosSdk(IOSSdk iosSdk, {required Logger? logger}) async {
     if (iosSdk == IOSSdk.iPhoneOs) {
@@ -117,12 +110,6 @@ class RunCLinker {
   }
 
   Future<void> runClangLike({required ToolInstance compiler}) async {
-    final isStaticLib = staticLibrary != null;
-    Uri? archiver_;
-    if (isStaticLib) {
-      archiver_ = await archiver();
-    }
-
     late final IOSSdk targetIosSdk;
     if (target.os == OS.iOS) {
       targetIosSdk = buildConfig.targetIOSSdk!;
@@ -170,7 +157,6 @@ class RunCLinker {
             // terms of overhead. We would have to know wether the target into
             // which the static library is linked is PIC, PIE or neither. Then
             // we could use the same option for the static library.
-            if (staticLibrary != null) '-fPIC',
             if (executable != null) ...[
               // Generate position-independent code for executables.
               '-fPIE',
@@ -204,29 +190,12 @@ class RunCLinker {
           '--shared',
           '-o',
           outDir.resolveUri(dynamicLibrary!).toFilePath(),
-        ] else if (staticLibrary != null) ...[
-          '-c',
-          '-o',
-          outDir.resolve('out.o').toFilePath(),
         ],
       ],
       logger: logger,
       captureOutput: false,
       throwOnUnexpectedExitCode: true,
     );
-    if (staticLibrary != null) {
-      await runProcess(
-        executable: archiver_!,
-        arguments: [
-          'rc',
-          outDir.resolveUri(staticLibrary!).toFilePath(),
-          outDir.resolve('out.o').toFilePath(),
-        ],
-        logger: logger,
-        captureOutput: false,
-        throwOnUnexpectedExitCode: true,
-      );
-    }
   }
 
   Future<void> runCl({required ToolInstance compiler}) async {
@@ -234,12 +203,6 @@ class RunCLinker {
     final vcvarsArgs = _resolver.toolchainEnvironmentScriptArguments();
     final environment =
         await environmentFromBatchFile(vcvars, arguments: vcvarsArgs ?? []);
-
-    final isStaticLib = staticLibrary != null;
-    Uri? archiver_;
-    if (isStaticLib) {
-      archiver_ = await archiver();
-    }
 
     final result = await runProcess(
       executable: compiler.uri,
@@ -261,10 +224,6 @@ class RunCLinker {
           '/DLL',
           '/out:${outDir.resolveUri(dynamicLibrary!).toFilePath()}',
         ],
-        if (staticLibrary != null) ...[
-          '/c',
-          ...sources.map((e) => e.toFilePath()),
-        ],
       ],
       workingDirectory: outDir,
       environment: environment,
@@ -272,21 +231,6 @@ class RunCLinker {
       captureOutput: false,
       throwOnUnexpectedExitCode: true,
     );
-
-    if (staticLibrary != null) {
-      await runProcess(
-        executable: archiver_!,
-        arguments: [
-          '/out:${staticLibrary!.toFilePath()}',
-          '*.obj',
-        ],
-        workingDirectory: outDir,
-        environment: environment,
-        logger: logger,
-        captureOutput: false,
-        throwOnUnexpectedExitCode: true,
-      );
-    }
 
     assert(result.exitCode == 0);
   }
