@@ -136,9 +136,7 @@ class CBuilder implements Builder {
 
   final List<String> linkerFlags;
 
-  final bool link;
-
-  Uri? staticArchive;
+  final Uri? linkInput;
 
   CBuilder.library({
     required this.name,
@@ -157,7 +155,7 @@ class CBuilder implements Builder {
     this.cppLinkStdLib,
   })  : _type = _CBuilderType.library,
         linkerFlags = [],
-        link = false;
+        linkInput = null;
 
   CBuilder.executable({
     required this.name,
@@ -177,7 +175,7 @@ class CBuilder implements Builder {
         installName = null,
         pic = pie,
         linkerFlags = [],
-        link = false;
+        linkInput = null;
 
   CBuilder.link({
     required this.name,
@@ -197,10 +195,9 @@ class CBuilder implements Builder {
     Uri? linkerScript,
     List<String>? linkerFlags,
     bool gcSections = true,
-    this.staticArchive,
+    this.linkInput,
   })  : _type = _CBuilderType.library,
-        linkerFlags = linkerFlags ?? [],
-        link = true {
+        linkerFlags = linkerFlags ?? [] {
     if (linkerScript != null) {
       this.linkerFlags.add('--version-script=$linkerScript');
     }
@@ -264,7 +261,7 @@ class CBuilder implements Builder {
         std: std,
         language: language,
         cppLinkStdLib: cppLinkStdLib,
-        linkInput: link ? staticArchive! : null,
+        linkInput: linkInput,
       );
       await task.run();
     }

@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:io';
-
 import 'package:native_assets_cli/native_assets_cli.dart';
 import 'package:native_toolchain_c/native_toolchain_c.dart';
 import 'package:native_toolchain_c/src/utils/run_process.dart';
@@ -18,7 +16,7 @@ void main() {
     final builder = CBuilder.link(
       name: 'mylibname',
       assetId: 'assetId',
-      staticArchive: Uri.file('test/cbuilder/testfiles/linker/test.a'),
+      linkInput: Uri.file('test/cbuilder/testfiles/linker/test.a'),
       linkerScript: Uri.file('test/cbuilder/testfiles/linker/symbols.lds'),
       flags: ['-u', 'my_other_func'],
       linkerFlags: ['-strip-debug'],
