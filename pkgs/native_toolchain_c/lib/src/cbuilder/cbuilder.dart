@@ -8,6 +8,7 @@ import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 import 'package:native_assets_cli/native_assets_cli.dart';
 
+import 'language.dart';
 import 'run_cbuilder.dart';
 
 abstract class Builder {
@@ -16,25 +17,6 @@ abstract class Builder {
     required BuildOutput buildOutput,
     required Logger? logger,
   });
-}
-
-/// A programming language that can be selected for compilation of source files.
-///
-/// See [CBuilder.language] for more information.
-class Language {
-  /// The name of the language.
-  final String name;
-
-  const Language._(this.name);
-
-  static const Language c = Language._('c');
-  static const Language cpp = Language._('c++');
-
-  /// Known values for [Language].
-  static const List<Language> values = [c, cpp];
-
-  @override
-  String toString() => name;
 }
 
 /// Specification for building an artifact with a C compiler.
@@ -202,6 +184,7 @@ class CBuilder implements Builder {
     this.std,
     this.language = Language.c,
     this.cppLinkStdLib,
+    required String linkerScript,
   }) : _type = _CBuilderType.library;
 
   /// Runs the C Compiler with on this C build spec.

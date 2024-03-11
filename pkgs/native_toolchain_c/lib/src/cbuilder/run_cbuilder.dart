@@ -15,8 +15,8 @@ import '../native_toolchain/xcode.dart';
 import '../tool/tool_instance.dart';
 import '../utils/env_from_bat.dart';
 import '../utils/run_process.dart';
-import 'cbuilder.dart';
 import 'compiler_resolver.dart';
+import 'language.dart';
 
 class RunCBuilder {
   final BuildConfig buildConfig;
