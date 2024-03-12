@@ -17,6 +17,7 @@ import '../utils/env_from_bat.dart';
 import '../utils/run_process.dart';
 import 'compiler_resolver.dart';
 import 'language.dart';
+import 'linker_options.dart';
 
 class RunCBuilder {
   final BuildConfig buildConfig;
@@ -42,7 +43,7 @@ class RunCBuilder {
   final String? std;
   final Language language;
   final String? cppLinkStdLib;
-  final Uri? linkInput;
+  final LinkerOptions? linkerOptions;
 
   RunCBuilder({
     required this.buildConfig,
@@ -59,7 +60,7 @@ class RunCBuilder {
     this.std,
     this.language = Language.c,
     this.cppLinkStdLib,
-    this.linkInput,
+    this.linkerOptions,
   })  : outDir = buildConfig.outDir,
         target = buildConfig.target,
         assert([executable, dynamicLibrary, staticLibrary]
@@ -108,12 +109,13 @@ class RunCBuilder {
       compiler.uri.resolve('../sysroot/');
 
   Future<void> run() async {
-    if (linkInput != null) {
+    if (linkerOptions != null) {
       final linker_ = await linker();
       final linkerTool = linker_.tool;
       if (linkerTool == appleClang ||
           linkerTool == clang ||
-          linkerTool == gcc) {
+          linkerTool == gcc ||
+          linkerTool == gnuLinker) {
         await runClangLike(compiler: linker_);
         return;
       }
@@ -226,7 +228,8 @@ class RunCBuilder {
           '-o',
           outDir.resolve('out.o').toFilePath(),
         ],
-        if (linkInput != null) linkInput!.toFilePath(),
+        ...linkerOptions?.flags(compiler.tool) ?? [],
+        if (linkerOptions != null) linkerOptions!.linkInput.toFilePath(),
       ],
       logger: logger,
       captureOutput: false,

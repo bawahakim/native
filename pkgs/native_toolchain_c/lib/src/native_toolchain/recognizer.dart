@@ -68,7 +68,11 @@ class LinkerRecognizer implements ToolResolver {
     logger?.finer('Trying to recognize $uri.');
     final filePath = uri.toFilePath();
     Tool? tool;
-    if (filePath.contains('-ld')) {
+
+    //TODO: Make this logic more correct
+    if (filePath.endsWith('clang')) {
+      tool = clang;
+    } else if (filePath.endsWith('ld')) {
       tool = gnuLinker;
     } else if (filePath.endsWith(os.executableFileName('ld.lld'))) {
       tool = lld;

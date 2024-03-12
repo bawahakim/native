@@ -9,6 +9,7 @@ import 'package:meta/meta.dart';
 import 'package:native_assets_cli/native_assets_cli.dart';
 
 import 'language.dart';
+import 'linker_options.dart';
 import 'run_cbuilder.dart';
 
 abstract class Builder {
@@ -134,9 +135,7 @@ class CBuilder implements Builder {
   /// | Fuchsia | `c++`        |
   final String? cppLinkStdLib;
 
-  final List<String> linkerFlags;
-
-  final Uri? linkInput;
+  final LinkerOptions? linkerOptions;
 
   CBuilder.library({
     required this.name,
@@ -154,8 +153,7 @@ class CBuilder implements Builder {
     this.language = Language.c,
     this.cppLinkStdLib,
   })  : _type = _CBuilderType.library,
-        linkerFlags = [],
-        linkInput = null;
+        linkerOptions = null;
 
   CBuilder.executable({
     required this.name,
@@ -174,8 +172,7 @@ class CBuilder implements Builder {
         assetId = null,
         installName = null,
         pic = pie,
-        linkerFlags = [],
-        linkInput = null;
+        linkerOptions = null;
 
   CBuilder.link({
     required this.name,
@@ -186,8 +183,6 @@ class CBuilder implements Builder {
     @visibleForTesting this.installName,
     this.flags = const [],
     this.defines = const {},
-    this.buildModeDefine = true,
-    this.ndebugDefine = true,
     this.pic = true,
     this.std,
     this.language = Language.c,
@@ -195,16 +190,16 @@ class CBuilder implements Builder {
     Uri? linkerScript,
     List<String>? linkerFlags,
     bool gcSections = true,
-    this.linkInput,
+    required Uri linkInput,
   })  : _type = _CBuilderType.library,
-        linkerFlags = linkerFlags ?? [] {
-    if (linkerScript != null) {
-      this.linkerFlags.add('--version-script=$linkerScript');
-    }
-    if (gcSections) {
-      this.linkerFlags.add('--gc-sections');
-    }
-  }
+        buildModeDefine = false,
+        ndebugDefine = false,
+        linkerOptions = LinkerOptions(
+          flags: linkerFlags ?? [],
+          linkInput: linkInput,
+          gcSections: gcSections,
+          linkerScript: linkerScript,
+        );
 
   /// Runs the C Compiler with on this C build spec.
   ///
@@ -250,7 +245,7 @@ class CBuilder implements Builder {
                 : null,
         executable: _type == _CBuilderType.executable ? exeUri : null,
         installName: installName,
-        flags: [...flags, ...linkerFlags.map((e) => '-Wl,$e')],
+        flags: flags,
         defines: {
           ...defines,
           if (buildModeDefine) buildConfig.buildMode.name.toUpperCase(): null,
@@ -261,7 +256,7 @@ class CBuilder implements Builder {
         std: std,
         language: language,
         cppLinkStdLib: cppLinkStdLib,
-        linkInput: linkInput,
+        linkerOptions: linkerOptions,
       );
       await task.run();
     }
