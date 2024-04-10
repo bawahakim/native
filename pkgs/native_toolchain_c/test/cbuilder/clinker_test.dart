@@ -20,7 +20,7 @@ void main() {
     return;
   }
 
-  final builder = CBuilder.link(
+  final linkerManual = CBuilder.link(
     name: 'mylibname',
     assetName: 'assetName',
     linkerOptions: LinkerOptions.manual(
@@ -31,26 +31,25 @@ void main() {
     ),
     flags: ['-u', 'my_other_func'],
   );
-
+  final linkerAuto = CBuilder.link(
+    name: 'mylibname',
+    assetName: 'assetName',
+    linkerOptions: LinkerOptions.treeshake(
+      linkInput: Uri.file('test/cbuilder/testfiles/linker/test.a'),
+      symbols: ['my_other_func'],
+    ),
+  );
   const architecture = Architecture.x64;
   const os = OS.linux;
 
   test('link test ld', () async {
     final cCompilerConfig = CCompilerConfig(linker: Uri.file('/usr/bin/ld'));
 
-    final tempUri = await tempDirForTest();
-    final buildOutput = BuildOutput();
-
-    final buildConfig = getBuildConfig(
-      tempUri,
+    final buildOutput = await _runBuild(
       os,
       architecture,
       cCompilerConfig,
-    );
-    await builder.run(
-      buildConfig: buildConfig,
-      buildOutput: buildOutput,
-      logger: logger,
+      linkerManual,
     );
 
     // Obtained by running
@@ -62,19 +61,11 @@ void main() {
   test('link test clang', () async {
     final cCompilerConfig = CCompilerConfig(linker: Uri.file('/usr/bin/clang'));
 
-    final tempUri = await tempDirForTest();
-    final buildOutput = BuildOutput();
-
-    final buildConfig = getBuildConfig(
-      tempUri,
+    final buildOutput = await _runBuild(
       os,
       architecture,
       cCompilerConfig,
-    );
-    await builder.run(
-      buildConfig: buildConfig,
-      buildOutput: buildOutput,
-      logger: logger,
+      linkerManual,
     );
 
     // Obtained by running
@@ -82,6 +73,61 @@ void main() {
     const sizeWithAllSymbols = 15457;
     await checkResults(buildOutput, sizeWithAllSymbols);
   });
+
+  test('link test ld auto', () async {
+    final cCompilerConfig = CCompilerConfig(linker: Uri.file('/usr/bin/ld'));
+
+    final buildOutput = await _runBuild(
+      os,
+      architecture,
+      cCompilerConfig,
+      linkerAuto,
+    );
+
+    // Obtained by running
+    // /usr/bin/ld -fPIC  --shared -o /tmp/libmylibname_ld_allsymbols.so --strip-debug --gc-sections --whole-archive test/cbuilder/testfiles/linker/test.a
+    const maxSize = 13760;
+    await checkResults(buildOutput, maxSize);
+  });
+
+  test('link test clang auto', () async {
+    final cCompilerConfig = CCompilerConfig(linker: Uri.file('/usr/bin/clang'));
+
+    final buildOutput = await _runBuild(
+      os,
+      architecture,
+      cCompilerConfig,
+      linkerAuto,
+    );
+
+    // Obtained by running
+    // /usr/bin/clang -fPIC  --shared -o /tmp/libmylibname_clang_allsymbols.so -Wl,--strip-debug -Wl,--gc-sections -Wl,--whole-archive test/cbuilder/testfiles/linker/test.a -Wl,--no-whole-archive
+    const sizeWithAllSymbols = 15457;
+    await checkResults(buildOutput, sizeWithAllSymbols);
+  });
+}
+
+Future<BuildOutput> _runBuild(
+  OS os,
+  Architecture architecture,
+  CCompilerConfig cCompilerConfig,
+  CBuilder cbuilder,
+) async {
+  final tempUri = await tempDirForTest();
+  final buildOutput = BuildOutput();
+
+  final buildConfig = getBuildConfig(
+    tempUri,
+    os,
+    architecture,
+    cCompilerConfig,
+  );
+  await cbuilder.run(
+    buildConfig: buildConfig,
+    buildOutput: buildOutput,
+    logger: logger,
+  );
+  return buildOutput;
 }
 
 Future<void> checkResults(BuildOutput buildOutput, int maxSize) async {
