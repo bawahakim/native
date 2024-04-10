@@ -27,13 +27,7 @@ class CompilerRecognizer implements ToolResolver {
     if (filePath.contains('-gcc')) {
       tool = gcc;
     } else if (filePath.endsWith(os.executableFileName('clang'))) {
-      final stdout = await CliFilter.executeCli(uri,
-          arguments: ['--version'], logger: logger);
-      if (stdout.contains('Apple clang')) {
-        tool = appleClang;
-      } else {
-        tool = clang;
-      }
+      tool = await _whichClang(uri, logger, tool);
     } else if (filePath.endsWith('cl.exe')) {
       tool = cl;
     }
@@ -57,13 +51,22 @@ class CompilerRecognizer implements ToolResolver {
   }
 }
 
+Future<Tool?> _whichClang(Uri uri, Logger? logger, Tool? tool) async {
+  final stdout =
+      await CliFilter.executeCli(uri, arguments: ['--version'], logger: logger);
+  if (stdout.contains('Apple clang')) {
+    tool = appleClang;
+  } else {
+    tool = clang;
+  }
+  return tool;
+}
+
 class LinkerRecognizer implements ToolResolver {
   final Uri uri;
   final OS os;
 
   LinkerRecognizer(this.uri, this.os);
-
-  final _gnuLinkerRegex = RegExp(r'(?:gnu)?.*-?ld$');
 
   @override
   Future<List<ToolInstance>> resolve({required Logger? logger}) async {
@@ -74,20 +77,29 @@ class LinkerRecognizer implements ToolResolver {
 
     //TODO: Make this logic more correct
     if (filePath.endsWith('clang')) {
-      tool = clang;
-    } else if (_gnuLinkerRegex.hasMatch(filePath)) {
+      tool = await _whichClang(uri, logger, tool);
+    } else if (filePath.endsWith('ld')) {
       tool = gnuLinker;
     } else if (filePath.endsWith(os.executableFileName('ld.lld'))) {
       tool = lld;
     } else if (os == OS.macOS && filePath.endsWith('ld')) {
       tool = appleLd;
-    } else if (filePath.endsWith('link.exe')) {
+    } else if (os == OS.windows && filePath.endsWith('link.exe')) {
       tool = link;
     }
 
     if (tool != null) {
       logger?.fine('Tool instance $uri is likely $tool.');
       final toolInstance = ToolInstance(tool: tool, uri: uri);
+      if (tool == clang) {
+        return [
+          await CliVersionResolver.lookupVersion(
+            toolInstance,
+            logger: logger,
+            arguments: ['--version'],
+          ),
+        ];
+      }
       if (tool == lld) {
         return [
           await CliVersionResolver.lookupVersion(

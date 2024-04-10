@@ -34,6 +34,7 @@ void main() async {
         armLinuxGnueabihfLd, (uri) => LinkerRecognizer(uri, OS.linux)),
     RecognizerTest(cl, CompilerRecognizer.new),
     RecognizerTest(clang, CompilerRecognizer.new),
+    RecognizerTest(clang, (uri) => LinkerRecognizer(uri, OS.current)),
     RecognizerTest(i686LinuxGnuGcc, CompilerRecognizer.new),
     RecognizerTest(i686LinuxGnuGccAr, ArchiverRecognizer.new),
     RecognizerTest(i686LinuxGnuLd, (uri) => LinkerRecognizer(uri, OS.linux)),
