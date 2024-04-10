@@ -23,13 +23,10 @@ void main() {
   final builder = CBuilder.link(
     name: 'mylibname',
     assetName: 'assetName',
-    linkerOptions: LinkerOptions.manual(
-      flags: ['--strip-debug'],
+    linkerOptions: LinkerOptions.treeshake(
       linkInput: Uri.file('test/cbuilder/testfiles/linker/test.a'),
-      gcSections: true,
-      linkerScript: Uri.file('test/cbuilder/testfiles/linker/symbols.lds'),
+      symbols: ['my_other_func'],
     ),
-    flags: ['-u', 'my_other_func'],
   );
 
   const architecture = Architecture.x64;

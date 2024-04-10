@@ -187,19 +187,10 @@ class CBuilder implements Builder {
     this.std,
     this.language = Language.c,
     this.cppLinkStdLib,
-    Uri? linkerScript,
-    List<String>? linkerFlags,
-    bool gcSections = true,
-    required Uri linkInput,
+    required LinkerOptions this.linkerOptions,
   })  : _type = _CBuilderType.library,
         buildModeDefine = false,
-        ndebugDefine = false,
-        linkerOptions = LinkerOptions(
-          flags: linkerFlags ?? [],
-          linkInput: linkInput,
-          gcSections: gcSections,
-          linkerScript: linkerScript,
-        );
+        ndebugDefine = false;
 
   /// Runs the C Compiler with on this C build spec.
   ///
