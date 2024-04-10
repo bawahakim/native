@@ -78,12 +78,14 @@ class LinkerRecognizer implements ToolResolver {
     //TODO: Make this logic more correct
     if (filePath.endsWith('clang')) {
       tool = await _whichClang(uri, logger, tool);
-    } else if (filePath.endsWith('-ld')) {
-      tool = gnuLinker;
     } else if (filePath.endsWith(os.executableFileName('ld.lld'))) {
       tool = lld;
-    } else if (os == OS.macOS && filePath.endsWith('ld')) {
-      tool = appleLd;
+    } else if (filePath.endsWith('ld')) {
+      if (os == OS.macOS) {
+        tool = appleLd;
+      } else {
+        tool = gnuLinker;
+      }
     } else if (os == OS.windows && filePath.endsWith('link.exe')) {
       tool = link;
     }
