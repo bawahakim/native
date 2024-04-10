@@ -83,6 +83,8 @@ class NativeAssetsBuildPlanner {
   }
 }
 
+/// A graph of package dependencies, encoded as package name -> list of package
+/// dependencies.
 class PackageGraph {
   final Map<String, List<String>> map;
 

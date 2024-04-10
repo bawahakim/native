@@ -32,7 +32,7 @@ void main() async {
     test('native_add build$testSuffix', () async {
       final testTempUri = tempUri.resolve('test1/');
       await Directory.fromUri(testTempUri).create();
-      final testPackageUri = packageUri.resolve('example/$name/');
+      final testPackageUri = packageUri.resolve('example/build/$name/');
       final dartUri = Uri.file(Platform.resolvedExecutable);
 
       final processResult = await Process.run(
@@ -68,7 +68,7 @@ void main() async {
       expect(processResult.exitCode, 0);
 
       final buildOutputUri = tempUri.resolve('build_output.json');
-      final buildOutput = BuildOutputImpl.fromJsonString(
+      final buildOutput = HookOutputImpl.fromJsonString(
           await File.fromUri(buildOutputUri).readAsString());
       final assets = buildOutput.assets;
       final dependencies = buildOutput.dependencies;

@@ -4,7 +4,27 @@
 
 part of '../api/build_config.dart';
 
-final class BuildConfigImpl implements BuildConfig {
+final class BuildConfigImpl extends HookConfigImpl implements BuildConfig {
+  @override
+  Uri get script {
+    final hookScript =
+        packageRoot.resolve('hook/').resolve(Hook.build.scriptName);
+    if (File.fromUri(hookScript).existsSync()) {
+      return hookScript;
+    } else {
+      return packageRoot.resolve(Hook.build.scriptName);
+    }
+  }
+
+  @override
+  String get outputName =>
+      version > Version(1, 1, 0) ? 'build_output.json' : 'build_output.yaml';
+
+  @override
+  Uri get configFile => outputDirectory.resolve('../config.json');
+
+  /// The folder in which all output and intermediate artifacts should be
+  /// placed.
   @override
   Uri get outputDirectory => _outDir;
   late final Uri _outDir;
@@ -83,6 +103,7 @@ final class BuildConfigImpl implements BuildConfig {
 
   late final List<String> _supportedAssetTypes;
 
+  @override
   Version get version => _version;
 
   late final Version _version;
@@ -172,6 +193,7 @@ final class BuildConfigImpl implements BuildConfig {
     Map<String, Metadata>? dependencyMetadata,
     Iterable<String>? supportedAssetTypes,
     Version? version,
+    required Hook hook,
   }) {
     final input = [
       version ?? latestVersion,
@@ -193,6 +215,7 @@ final class BuildConfigImpl implements BuildConfig {
           json.encode(entry.value.toJson()),
         ],
       ..._supportedAssetTypesBackwardsCompatibility(supportedAssetTypes),
+      hook.name,
     ].join('###');
     final sha256String = sha256.convert(utf8.encode(input)).toString();
     // 256 bit hashes lead to 64 hex character strings.
@@ -220,7 +243,7 @@ final class BuildConfigImpl implements BuildConfig {
   /// If we ever were to make breaking changes, it would be useful to give
   /// proper error messages rather than just fail to parse the JSON
   /// representation in the protocol.
-  static Version latestVersion = Version(1, 2, 0);
+  static Version latestVersion = Version(1, 3, 0);
 
   factory BuildConfigImpl.fromConfig(Config config) {
     final result = BuildConfigImpl._().._cCompiler = CCompilerConfigImpl._();
@@ -235,7 +258,7 @@ final class BuildConfigImpl implements BuildConfig {
     }
 
     if (configExceptions.isNotEmpty) {
-      throw FormatException('Configuration is not in the right format. '
+      throw FormatException('BuildConfig is not in the right format. '
           'FormatExceptions: $configExceptions');
     }
 
@@ -455,6 +478,9 @@ final class BuildConfigImpl implements BuildConfig {
     return result.sortOnKey();
   }
 
+  static BuildConfigImpl fromJson(Map<String, dynamic> buildConfigJson) =>
+      BuildConfigImpl.fromConfig(Config(fileParsed: buildConfigJson));
+
   Map<String, Object> toJson() {
     late Map<String, Object> cCompilerJson;
     if (!dryRun) {
@@ -467,7 +493,8 @@ final class BuildConfigImpl implements BuildConfig {
       packageRootConfigKey: _packageRoot.toFilePath(),
       OSImpl.configKey: _targetOS.toString(),
       LinkModePreferenceImpl.configKey: _linkModePreference.toString(),
-      supportedAssetTypesKey: _supportedAssetTypes,
+      if (_supportedAssetTypes.isNotEmpty)
+        supportedAssetTypesKey: _supportedAssetTypes,
       _versionKey: version.toString(),
       if (dryRun) dryRunConfigKey: dryRun,
       if (!dryRun) ...{
@@ -488,6 +515,7 @@ final class BuildConfigImpl implements BuildConfig {
     }.sortOnKey();
   }
 
+  @override
   String toJsonString() => const JsonEncoder.withIndent('  ').convert(toJson());
 
   @override
