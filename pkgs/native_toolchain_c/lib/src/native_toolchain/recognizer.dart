@@ -76,7 +76,7 @@ class LinkerRecognizer implements ToolResolver {
     Tool? tool;
 
     //TODO: Make this logic more correct
-    if (filePath.endsWith('clang')) {
+    if (filePath.endsWith(os.executableFileName('clang'))) {
       tool = await _whichClang(uri, logger, tool);
     } else if (filePath.endsWith(os.executableFileName('ld.lld'))) {
       tool = lld;
