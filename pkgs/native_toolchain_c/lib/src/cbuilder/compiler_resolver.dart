@@ -223,7 +223,8 @@ class CompilerResolver {
       assert(await File.fromUri(configLdUri).exists());
       logger?.finer('Using linker ${configLdUri.toFilePath()} '
           'from BuildConfig.cCompiler.ld.');
-      return (await LinkerRecognizer(configLdUri).resolve(logger: logger))
+      return (await LinkerRecognizer(configLdUri, hostOS)
+              .resolve(logger: logger))
           .first;
     }
     logger?.finer('No linker set in BuildConfig.cCompiler.ld.');

@@ -59,10 +59,11 @@ class CompilerRecognizer implements ToolResolver {
 
 class LinkerRecognizer implements ToolResolver {
   final Uri uri;
+  final OS os;
 
-  LinkerRecognizer(this.uri);
+  LinkerRecognizer(this.uri, this.os);
 
-  final _gnuLinkerRegex = RegExp(r'(?:gnu)?.*-ld$');
+  final _gnuLinkerRegex = RegExp(r'(?:gnu)?.*-?ld$');
 
   @override
   Future<List<ToolInstance>> resolve({required Logger? logger}) async {
@@ -78,7 +79,7 @@ class LinkerRecognizer implements ToolResolver {
       tool = gnuLinker;
     } else if (filePath.endsWith(os.executableFileName('ld.lld'))) {
       tool = lld;
-    } else if (filePath.endsWith(os.executableFileName('ld'))) {
+    } else if (os == OS.macOS && filePath.endsWith('ld')) {
       tool = appleLd;
     } else if (filePath.endsWith('link.exe')) {
       tool = link;

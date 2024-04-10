@@ -20,6 +20,7 @@ class LinkerOptions {
     required this.linkerScript,
   }) : _flags = flags;
 
+  ///
   LinkerOptions.treeshake({
     List<String>? flags,
     required List<String> symbols,
