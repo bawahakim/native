@@ -62,6 +62,8 @@ class LinkerRecognizer implements ToolResolver {
 
   LinkerRecognizer(this.uri);
 
+  final _gnuLinkerRegex = RegExp(r'(?:gnu)?.*-ld$');
+
   @override
   Future<List<ToolInstance>> resolve({required Logger? logger}) async {
     final os = OS.current;
@@ -72,7 +74,7 @@ class LinkerRecognizer implements ToolResolver {
     //TODO: Make this logic more correct
     if (filePath.endsWith('clang')) {
       tool = clang;
-    } else if (filePath.endsWith('gnu-ld')) {
+    } else if (_gnuLinkerRegex.hasMatch(filePath)) {
       tool = gnuLinker;
     } else if (filePath.endsWith(os.executableFileName('ld.lld'))) {
       tool = lld;
