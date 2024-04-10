@@ -25,7 +25,7 @@ void main() {
     assetName: 'assetName',
     linkerOptions: LinkerOptions.manual(
       flags: ['--strip-debug'],
-      linkInput: Uri.file('test/cbuilder/testfiles/linker/test.a'),
+      linkInput: [Uri.file('test/cbuilder/testfiles/linker/test.a')],
       gcSections: true,
       linkerScript: Uri.file('test/cbuilder/testfiles/linker/symbols.lds'),
     ),
@@ -35,7 +35,7 @@ void main() {
     name: 'mylibname',
     assetName: 'assetName',
     linkerOptions: LinkerOptions.treeshake(
-      linkInput: Uri.file('test/cbuilder/testfiles/linker/test.a'),
+      linkInput: [Uri.file('test/cbuilder/testfiles/linker/test.a')],
       symbols: ['my_other_func'],
     ),
   );
@@ -53,7 +53,7 @@ void main() {
     );
 
     // Obtained by running
-    // /usr/bin/ld -fPIC  --shared -o /tmp/libmylibname_ld_allsymbols.so --strip-debug --gc-sections --whole-archive test/cbuilder/testfiles/linker/test.a
+    // /usr/bin/ld -fPIC --shared -o /tmp/libmylibname_ld_allsymbols.so --strip-debug --gc-sections test/cbuilder/testfiles/linker/test.a
     const maxSize = 13760;
     await checkResults(buildOutput, maxSize);
   });
@@ -69,7 +69,7 @@ void main() {
     );
 
     // Obtained by running
-    // /usr/bin/clang -fPIC  --shared -o /tmp/libmylibname_clang_allsymbols.so -Wl,--strip-debug -Wl,--gc-sections -Wl,--whole-archive test/cbuilder/testfiles/linker/test.a -Wl,--no-whole-archive
+    // /usr/bin/clang -fPIC --shared -o /tmp/libmylibname_clang_allsymbols.so -Wl,--strip-debug -Wl,--gc-sections test/cbuilder/testfiles/linker/test.a
     const sizeWithAllSymbols = 15457;
     await checkResults(buildOutput, sizeWithAllSymbols);
   });
@@ -85,7 +85,7 @@ void main() {
     );
 
     // Obtained by running
-    // /usr/bin/ld -fPIC  --shared -o /tmp/libmylibname_ld_allsymbols.so --strip-debug --gc-sections --whole-archive test/cbuilder/testfiles/linker/test.a
+    // /usr/bin/ld -fPIC --shared -o /tmp/libmylibname_ld_allsymbols.so --strip-debug --gc-sections test/cbuilder/testfiles/linker/test.a
     const maxSize = 13760;
     await checkResults(buildOutput, maxSize);
   });
@@ -101,7 +101,7 @@ void main() {
     );
 
     // Obtained by running
-    // /usr/bin/clang -fPIC  --shared -o /tmp/libmylibname_clang_allsymbols.so -Wl,--strip-debug -Wl,--gc-sections -Wl,--whole-archive test/cbuilder/testfiles/linker/test.a -Wl,--no-whole-archive
+    // /usr/bin/clang -fPIC --shared -o /tmp/libmylibname_clang_allsymbols.so -Wl,--strip-debug -Wl,--gc-sections test/cbuilder/testfiles/linker/test.a
     const sizeWithAllSymbols = 15457;
     await checkResults(buildOutput, sizeWithAllSymbols);
   });

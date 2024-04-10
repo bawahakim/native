@@ -230,7 +230,8 @@ class RunCBuilder {
           outDir.resolve('out.o').toFilePath(),
         ],
         ...linkerOptions?.flags(compiler.tool) ?? [],
-        if (linkerOptions != null) linkerOptions!.linkInput.toFilePath(),
+        if (linkerOptions != null)
+          ...linkerOptions!.linkInput.map((e) => e.toFilePath()),
       ],
       logger: logger,
       captureOutput: false,
