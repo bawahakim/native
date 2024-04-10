@@ -1,3 +1,15 @@
+## 0.6.1
+
+- Fix test.
+
+## 0.6.0
+
+- **Breaking change** Completely rewritten API in `native_assets_cli`.
+- **Breaking change** Move `build.dart` to `hook/build.dart`.
+  https://github.com/dart-lang/native/issues/823
+  (Backwards compatibility, fallback to toplevel `build.dart`.)
+- Bump `package:native_assets_cli` to 0.5.0.
+
 ## 0.5.0
 
 - **Breaking change**: Hide implementation of `KernelAssets`.

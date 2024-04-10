@@ -6,7 +6,6 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 import 'package:jni/jni.dart';
-import 'package:jni/src/jvalues.dart';
 import 'package:test/test.dart';
 
 import 'test_util/test_util.dart';
@@ -27,7 +26,7 @@ void main() {
 
   if (!Platform.isAndroid) {
     checkDylibIsUpToDate();
-    Jni.spawnIfNotExists(dylibDir: "build/jni_libs", jvmOptions: ["-Xmx128m"]);
+    spawnJvm();
   }
   run(testRunner: test);
 }
@@ -47,9 +46,6 @@ void run({required TestRunnerCallback testRunner}) {
   //
   // For examples of a higher level API, see `jni_object_tests.dart`.
   final env = Jni.env;
-  testRunner('initDLApi', () {
-    Jni.initDLApi();
-  });
 
   testRunner('get JNI Version', () {
     expect(Jni.env.GetVersion(), isNot(equals(0)));
@@ -75,7 +71,7 @@ void run({required TestRunnerCallback testRunner}) {
               // it can be directly placed in the list. To convert into different primitive
               // types, use JValue<Type> wrappers.
               final jres = env.CallStaticObjectMethodA(integerClass, hexMethod,
-                  Jni.jvalues([JValueInt(i)], allocator: arena));
+                  toJValues([JValueInt(i)], allocator: arena));
 
               // use asDartString extension method on Pointer<JniEnv>
               // to convert a String jobject result to string
@@ -111,10 +107,11 @@ void run({required TestRunnerCallback testRunner}) {
                 integerClass,
                 "parseInt".toNativeChars(arena),
                 "(Ljava/lang/String;)I".toNativeChars(arena));
-            final args = JValueArgs(["hello"], arena);
+            final args = toJValues(["hello".toJString()..releasedBy(arena)],
+                allocator: arena);
             expect(
                 () => env.CallStaticIntMethodA(
-                    integerClass, parseIntMethod, args.values),
+                    integerClass, parseIntMethod, args),
                 throwsA(isA<JniException>()));
           }));
 
@@ -161,28 +158,40 @@ void run({required TestRunnerCallback testRunner}) {
                 "(Ljava/lang/String;)V".toNativeChars(arena));
             const str = "\nHello World from JNI!";
             final jstr = env.toJStringPtr(str);
-            env.CallVoidMethodA(out, println, Jni.jvalues([jstr]));
-            env.deleteAllRefs([system, printStream, jstr]);
+            env.CallVoidMethodA(
+                out, println, toJValues([jstr], allocator: arena));
+            env.DeleteGlobalRef(system);
+            env.DeleteGlobalRef(printStream);
+            env.DeleteGlobalRef(jstr);
           }));
   testRunner(
       'Env create reference methods should retain their default behavior', () {
-    final systemOut = Jni.retrieveStaticField<JObjectPtr>(
-        "java/lang/System", "out", "Ljava/io/PrintStream;");
+    final systemClass = using((arena) {
+      return env.FindClass("java/lang/System".toNativeChars(arena));
+    });
+    final systemOut = using((arena) {
+      final outField = env.GetStaticFieldID(
+          systemClass,
+          "out".toNativeChars(arena),
+          "Ljava/io/PrintStream;".toNativeChars(arena));
+      return env.GetStaticObjectField(systemClass, outField);
+    });
     var refType = env.GetObjectRefType(systemOut);
-    expect(refType, equals(JObjectRefType.JNIGlobalRefType));
+    expect(refType, JObjectRefType.JNIGlobalRefType);
     final localRef = env.NewLocalRef(systemOut);
     refType = env.GetObjectRefType(localRef);
-    expect(refType, equals(JObjectRefType.JNILocalRefType));
+    expect(refType, JObjectRefType.JNILocalRefType);
     final weakRef = env.NewWeakGlobalRef(systemOut);
     refType = env.GetObjectRefType(weakRef);
-    expect(refType, equals(JObjectRefType.JNIWeakGlobalRefType));
+    expect(refType, JObjectRefType.JNIWeakGlobalRefType);
     final globalRef = env.NewGlobalRef(localRef);
     refType = env.GetObjectRefType(globalRef);
-    expect(refType, equals(JObjectRefType.JNIGlobalRefType));
+    expect(refType, JObjectRefType.JNIGlobalRefType);
     env.DeleteGlobalRef(globalRef);
     env.DeleteWeakGlobalRef(weakRef);
     env.DeleteLocalRef(localRef);
     env.DeleteGlobalRef(systemOut);
+    env.DeleteGlobalRef(systemClass);
   });
   testRunner('long methods return long int without loss of precision', () {
     using((arena) {
@@ -200,16 +209,28 @@ void run({required TestRunnerCallback testRunner}) {
 
   testRunner('class <-> object methods', () {
     using((arena) {
-      final systemOut = Jni.retrieveStaticField<JObjectPtr>(
-          "java/lang/System", "out", "Ljava/io/PrintStream;");
-      final systemErr = Jni.retrieveStaticField<JObjectPtr>(
-          "java/lang/System", "err", "Ljava/io/PrintStream;");
+      final systemClass =
+          env.FindClass("java/lang/System".toNativeChars(arena));
+      final outField = env.GetStaticFieldID(
+          systemClass,
+          "out".toNativeChars(arena),
+          "Ljava/io/PrintStream;".toNativeChars(arena));
+      final errField = env.GetStaticFieldID(
+          systemClass,
+          "err".toNativeChars(arena),
+          "Ljava/io/PrintStream;".toNativeChars(arena));
+      final systemOut = env.GetStaticObjectField(systemClass, outField);
+      final systemErr = env.GetStaticObjectField(systemClass, errField);
       final outClass = env.GetObjectClass(systemOut);
       expect(env.IsInstanceOf(systemOut, outClass), isTrue);
       expect(env.IsInstanceOf(systemErr, outClass), isTrue);
       final errClass = env.GetObjectClass(systemErr);
       expect(env.IsSameObject(outClass, errClass), isTrue);
-      env.deleteAllRefs([systemOut, systemErr, outClass, errClass]);
+      env.DeleteGlobalRef(systemClass);
+      env.DeleteGlobalRef(systemOut);
+      env.DeleteGlobalRef(systemErr);
+      env.DeleteGlobalRef(outClass);
+      env.DeleteGlobalRef(errClass);
     });
   });
 }

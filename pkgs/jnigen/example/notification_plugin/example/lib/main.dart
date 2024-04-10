@@ -10,7 +10,7 @@ import 'package:jni/jni.dart';
 // more customization in future.
 import 'package:notification_plugin/notifications.dart';
 
-JObject activity = JObject.fromRef(Jni.getCurrentActivity());
+JObject activity = JObject.fromReference(Jni.getCurrentActivity());
 
 int i = 0;
 
@@ -28,7 +28,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatelessWidget {
-  MyHomePage({Key? key, required this.title}) : super(key: key);
+  MyHomePage({super.key, required this.title});
 
   final String title;
 

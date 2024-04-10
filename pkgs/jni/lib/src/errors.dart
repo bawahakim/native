@@ -4,27 +4,20 @@
 
 import 'package:jni/src/third_party/generated_bindings.dart';
 
-// TODO(#393): Add the fact that [JException] is now a [JObject] to the
+// TODO(#567): Add the fact that [JException] is now a [JObject] to the
 // CHANGELOG.
 
-final class UseAfterReleaseError extends Error {
-  @override
-  String toString() {
-    return 'Use after release error';
-  }
+final class UseAfterReleaseError extends StateError {
+  UseAfterReleaseError() : super('Use after release error');
 }
 
-// TODO(#393): Use NullPointerError once it's available.
-final class JNullError extends Error {
-  @override
-  String toString() => 'The reference was null';
+// TODO(#567): Use NullPointerError once it's available.
+final class JNullError extends StateError {
+  JNullError() : super('The reference was null');
 }
 
-final class DoubleReleaseError extends Error {
-  @override
-  String toString() {
-    return 'Double release error';
-  }
+final class DoubleReleaseError extends StateError {
+  DoubleReleaseError() : super('Double release error');
 }
 
 /// Represents JNI errors that might be returned by methods like
@@ -85,36 +78,7 @@ final class NoJvmInstanceError extends Error {
   String toString() => 'No JNI instance is available';
 }
 
-// TODO(#395): Remove this when calltypes are removed.
-extension on int {
-  static const _names = {
-    JniCallType.booleanType: 'bool',
-    JniCallType.byteType: 'byte',
-    JniCallType.shortType: 'short',
-    JniCallType.charType: 'char',
-    JniCallType.intType: 'int',
-    JniCallType.longType: 'long',
-    JniCallType.floatType: 'float',
-    JniCallType.doubleType: 'double',
-    JniCallType.objectType: 'object',
-    JniCallType.voidType: 'void',
-  };
-  String str() => _names[this]!;
-}
-
-// TODO(#395): Remove this when `JniCallType`s are removed.
-final class InvalidCallTypeError extends Error {
-  final int type;
-  final Set<int> allowed;
-
-  InvalidCallTypeError(this.type, this.allowed);
-
-  @override
-  String toString() => 'Invalid type for call ${type.str()}. '
-      'Allowed types are ${allowed.map((t) => t.str()).toSet()}';
-}
-
-// TODO(#393): Remove this class in favor of `JThrowable`.
+// TODO(#567): Remove this class in favor of `JThrowable`.
 class JniException implements Exception {
   /// Error message from Java exception.
   final String message;

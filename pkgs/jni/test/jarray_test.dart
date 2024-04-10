@@ -13,7 +13,7 @@ void main() {
   // Don't forget to initialize JNI.
   if (!Platform.isAndroid) {
     checkDylibIsUpToDate();
-    Jni.spawnIfNotExists(dylibDir: "build/jni_libs", jvmOptions: ["-Xmx128m"]);
+    spawnJvm();
   }
   run(testRunner: test);
 }
@@ -289,7 +289,7 @@ void run({required TestRunnerCallback testRunner}) {
       final string = "abc".toJString()..releasedBy(arena);
       final array = JArray.filled(3, string)..releasedBy(arena);
       expect(
-        () => JArray.filled(-3, JString.fromRef(nullptr)),
+        () => JArray.filled(-3, JString.fromReference(jNullReference)),
         throwsA(isA<RangeError>()),
       );
       expect(array.length, 3);

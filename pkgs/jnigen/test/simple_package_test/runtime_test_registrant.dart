@@ -18,10 +18,13 @@ const trillion = 1024 * 1024 * 1024 * 1024;
 
 void _runJavaGC() {
   final managementFactory =
-      Jni.findJClass('java/lang/management/ManagementFactory');
-  final bean = managementFactory.callStaticMethodByName<JObject>(
-      'getRuntimeMXBean', '()Ljava/lang/management/RuntimeMXBean;', []);
-  final pid = bean.callMethodByName<int>('getPid', '()J', []);
+      JClass.forName('java/lang/management/ManagementFactory');
+  final bean = managementFactory
+      .staticMethodId(
+          'getRuntimeMXBean', '()Ljava/lang/management/RuntimeMXBean;')
+      .call(managementFactory, JObject.type, []);
+  final pid =
+      bean.jClass.instanceMethodId('getPid', '()J').call(bean, jlong.type, []);
   ProcessResult result;
   do {
     result = Process.runSync('jcmd', [pid.toString(), 'GC.run']);
@@ -618,17 +621,20 @@ void registerTests(String groupName, TestRunnerCallback test) {
         // Currently we have one implementation of the interface.
         expect(MyInterface.$impls, hasLength(1));
         myInterface.release();
-        // Running System.gc() and waiting.
-        _runJavaGC();
-        for (var i = 0; i < 8; ++i) {
-          await Future<void>.delayed(Duration(milliseconds: (1 << i) * 100));
-          if (MyInterface.$impls.isEmpty) {
-            break;
+        if (!Platform.isAndroid) {
+          // Running garbage collection does not work on Android. Skipping this
+          // test for android.
+          _runJavaGC();
+          for (var i = 0; i < 8; ++i) {
+            await Future<void>.delayed(Duration(milliseconds: (1 << i) * 100));
+            if (MyInterface.$impls.isEmpty) {
+              break;
+            }
           }
+          // Since the interface is now deleted, the cleaner must signal to Dart
+          // to clean up.
+          expect(MyInterface.$impls, isEmpty);
         }
-        // Since the interface is now deleted, the cleaner must signal to Dart
-        // to clean up.
-        expect(MyInterface.$impls, isEmpty);
       });
     }
     group('Dart exceptions are handled', () {
@@ -656,17 +662,23 @@ void registerTests(String groupName, TestRunnerCallback test) {
             expect(
               Jni.env.IsInstanceOf(
                 runner.error.reference.pointer,
-                Jni.findClass('java/lang/reflect/UndeclaredThrowableException'),
+                JClass.forName('java/lang/reflect/UndeclaredThrowableException')
+                    .reference
+                    .pointer,
               ),
               isTrue,
             );
-            final cause = runner.error.callMethodByName<JObject>(
-                'getCause', '()Ljava/lang/Throwable;', []);
+            final throwableClass = runner.error.jClass;
+            final cause = throwableClass
+                .instanceMethodId('getCause', '()Ljava/lang/Throwable;')
+                .call(runner.error, JObject.type, []);
             expect(
               Jni.env.IsInstanceOf(
                 cause.reference.pointer,
-                Jni.findClass(
-                    'com/github/dart_lang/jni/PortProxy\$DartException'),
+                JClass.forName(
+                        'com/github/dart_lang/jni/PortProxy\$DartException')
+                    .reference
+                    .pointer,
               ),
               isTrue,
             );

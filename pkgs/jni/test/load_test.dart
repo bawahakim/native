@@ -32,7 +32,7 @@ void doGC() {
 void main() {
   if (!Platform.isAndroid) {
     checkDylibIsUpToDate();
-    Jni.spawnIfNotExists(dylibDir: "build/jni_libs", jvmOptions: ["-Xmx128m"]);
+    spawnJvm();
   }
   run(testRunner: test);
 }
@@ -43,19 +43,11 @@ const k256 = 256 * 1024;
 
 const secureRandomSeedBound = 4294967296;
 
-JObject getSystemOut() => Jni.retrieveStaticField<JObject>(
-      'System',
-      'out',
-      'Ljava/io/PrintStream;',
-    );
-
 final random = Random.secure();
 
-JObject newRandom() => Jni.newInstance(
-      "java/util/Random",
-      "(J)V",
-      [random.nextInt(secureRandomSeedBound)],
-    );
+final randomClass = JClass.forName('java/util/Random');
+JObject newRandom() => randomClass.constructorId('(J)V').call(
+    randomClass, const JObjectType(), [random.nextInt(secureRandomSeedBound)]);
 
 void run({required TestRunnerCallback testRunner}) {
   testRunner('Test 4K refs can be created in a row', () {
@@ -75,7 +67,7 @@ void run({required TestRunnerCallback testRunner}) {
         // The actual expect here does not matter. I am just being paranoid
         // against assigning to `_` because compiler may optimize it. (It has
         // side effect of calling FFI but still.)
-        expect(random.reference, isNot(nullptr));
+        expect(random.reference.pointer, isNot(nullptr));
       });
     }
   });
@@ -84,7 +76,7 @@ void run({required TestRunnerCallback testRunner}) {
       () {
     for (int i = 0; i < k256; i++) {
       final random = newRandom();
-      expect(random.reference, isNot(nullptr));
+      expect(random.reference.pointer, isNot(nullptr));
       random.release();
     }
   });
@@ -94,7 +86,7 @@ void run({required TestRunnerCallback testRunner}) {
       using((arena) {
         for (int i = 0; i < 256; i++) {
           final r = newRandom()..releasedBy(arena);
-          expect(r.reference, isNot(nullptr));
+          expect(r.reference.pointer, isNot(nullptr));
         }
       });
     }
@@ -104,20 +96,35 @@ void run({required TestRunnerCallback testRunner}) {
   // So we are checking if we can run this for large number of times.
   testRunner('Verify a call returning primitive can be run any times', () {
     final random = newRandom();
-    final nextInt = random.getMethodID("nextInt", "()I");
+    final nextInt = randomClass.instanceMethodId('nextInt', '()I');
     for (int i = 0; i < k256; i++) {
-      final rInt = random.callMethod<int>(nextInt, []);
+      final rInt = nextInt(random, const jintType(), []);
       expect(rInt, isA<int>());
     }
   });
 
+  void testFinalizer() {
+    testRunner('Finalizer correctly removes the references', () {
+      // We are checking if we can run this for large number of times.
+      // More than the number of available global references.
+      for (var i = 0; i < k256; ++i) {
+        final random = newRandom();
+        expect(random.reference.pointer, isNot(nullptr));
+        if (i % k4 == 0) {
+          doGC();
+        }
+      }
+    });
+  }
+
   void testRefValidityAfterGC(int delayInSeconds) {
     testRunner('Validate reference after GC & ${delayInSeconds}s sleep', () {
       final random = newRandom();
+      final nextInt = randomClass.instanceMethodId('nextInt', '()I');
       doGC();
       sleep(Duration(seconds: delayInSeconds));
       expect(
-        random.callMethodByName<int>("nextInt", "()I", []),
+        nextInt(random, const jintType(), []),
         isA<int>(),
       );
       expect(
@@ -129,6 +136,7 @@ void run({required TestRunnerCallback testRunner}) {
 
   // Dart_ExecuteInternalCommand doesn't exist in Android.
   if (!Platform.isAndroid) {
+    testFinalizer();
     testRefValidityAfterGC(1);
     testRefValidityAfterGC(10);
   }
