@@ -5,7 +5,8 @@
 import 'dart:io';
 
 import 'package:logging/logging.dart';
-import 'package:native_assets_cli/native_assets_cli.dart';
+import 'package:native_assets_cli/native_assets_cli.dart'
+    show Architecture, BuildConfig, OS;
 
 import '../native_toolchain/android_ndk.dart';
 import '../native_toolchain/apple_clang.dart';

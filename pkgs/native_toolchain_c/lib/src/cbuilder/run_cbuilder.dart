@@ -5,7 +5,8 @@
 import 'dart:math';
 
 import 'package:logging/logging.dart';
-import 'package:native_assets_cli/native_assets_cli.dart';
+import 'package:native_assets_cli/native_assets_cli.dart'
+    show Architecture, BuildConfig, IOSSdk, OS;
 
 import '../native_toolchain/apple_clang.dart';
 import '../native_toolchain/clang.dart';
