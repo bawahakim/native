@@ -72,7 +72,7 @@ class LinkerRecognizer implements ToolResolver {
     //TODO: Make this logic more correct
     if (filePath.endsWith('clang')) {
       tool = clang;
-    } else if (filePath.endsWith('ld')) {
+    } else if (filePath.endsWith('gnu-ld')) {
       tool = gnuLinker;
     } else if (filePath.endsWith(os.executableFileName('ld.lld'))) {
       tool = lld;

@@ -79,7 +79,7 @@ void main() {
 
     // Obtained by running
     // /usr/bin/clang -fPIC  --shared -o /tmp/libmylibname_clang_allsymbols.so -Wl,--strip-debug -Wl,--gc-sections -Wl,--whole-archive test/cbuilder/testfiles/linker/test.a -Wl,--no-whole-archive
-    const sizeWithAllSymbols = 15448;
+    const sizeWithAllSymbols = 15457;
     await checkResults(buildOutput, sizeWithAllSymbols);
   });
 }
