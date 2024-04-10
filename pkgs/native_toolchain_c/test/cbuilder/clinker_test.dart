@@ -15,24 +15,35 @@ import 'package:test/test.dart';
 import '../helpers.dart';
 
 void main() {
-  const target = Target.linuxX64;
+  if (!Platform.isLinux) {
+    // Avoid needing status files on Dart SDK CI.
+    return;
+  }
 
   final builder = CBuilder.link(
     name: 'mylibname',
-    assetId: 'assetId',
+    assetName: 'assetName',
     linkInput: Uri.file('test/cbuilder/testfiles/linker/test.a'),
     linkerScript: Uri.file('test/cbuilder/testfiles/linker/symbols.lds'),
     flags: ['-u', 'my_other_func'],
     linkerFlags: ['--strip-debug'],
   );
 
+  const architecture = Architecture.x64;
+  const os = OS.linux;
+
   test('link test ld', () async {
-    final cCompilerConfig = CCompilerConfig(ld: Uri.file('/usr/bin/ld'));
+    final cCompilerConfig = CCompilerConfig(linker: Uri.file('/usr/bin/ld'));
 
     final tempUri = await tempDirForTest();
     final buildOutput = BuildOutput();
 
-    final buildConfig = getBuildConfig(tempUri, target, cCompilerConfig);
+    final buildConfig = getBuildConfig(
+      tempUri,
+      os,
+      architecture,
+      cCompilerConfig,
+    );
     await builder.run(
       buildConfig: buildConfig,
       buildOutput: buildOutput,
@@ -46,12 +57,17 @@ void main() {
   });
 
   test('link test clang', () async {
-    final cCompilerConfig = CCompilerConfig(ld: Uri.file('/usr/bin/clang'));
+    final cCompilerConfig = CCompilerConfig(linker: Uri.file('/usr/bin/clang'));
 
     final tempUri = await tempDirForTest();
     final buildOutput = BuildOutput();
 
-    final buildConfig = getBuildConfig(tempUri, target, cCompilerConfig);
+    final buildConfig = getBuildConfig(
+      tempUri,
+      os,
+      architecture,
+      cCompilerConfig,
+    );
     await builder.run(
       buildConfig: buildConfig,
       buildOutput: buildOutput,
@@ -66,8 +82,7 @@ void main() {
 }
 
 Future<void> checkResults(BuildOutput buildOutput, int maxSize) async {
-  final filePath =
-      (buildOutput.assets.first.path as AssetAbsolutePath).uri.toFilePath();
+  final filePath = buildOutput.assets.first.file!.toFilePath();
 
   final readelf = (await runProcess(
     executable: Uri.file('readelf'),
@@ -84,13 +99,17 @@ Future<void> checkResults(BuildOutput buildOutput, int maxSize) async {
 }
 
 BuildConfig getBuildConfig(
-    Uri tempUri, Target target, CCompilerConfig cCompilerConfig) {
-  final buildConfig = BuildConfig(
-    outDir: tempUri,
+  Uri tempUri,
+  OS target,
+  Architecture architecture,
+  CCompilerConfig cCompilerConfig,
+) {
+  final buildConfig = BuildConfig.build(
+    outputDirectory: tempUri,
     packageName: 'testpackage',
     packageRoot: tempUri,
-    targetArchitecture: target.architecture,
-    targetOs: target.os,
+    targetArchitecture: architecture,
+    targetOS: target,
     buildMode: BuildMode.release,
     linkModePreference: LinkModePreference.dynamic,
     cCompiler: cCompilerConfig,

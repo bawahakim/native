@@ -208,16 +208,17 @@ class CompilerResolver {
       return result;
     }
 
-    final targetOs = buildConfig.targetOs;
+    final targetOs = buildConfig.targetOS;
     final targetArchitecture = buildConfig.targetArchitecture;
-    final errorMessage = "No tools configured on host '$host' with target "
+    final errorMessage =
+        "No tools configured on host '${hostOS}_$hostArchitecture' with target "
         "'${targetOs}_$targetArchitecture'.";
     logger?.severe(errorMessage);
     throw ToolError(errorMessage);
   }
 
   Future<ToolInstance?> _tryLoadLinkerFromConfig() async {
-    final configLdUri = buildConfig.cCompiler.ld;
+    final configLdUri = buildConfig.cCompiler.linker;
     if (configLdUri != null) {
       assert(await File.fromUri(configLdUri).exists());
       logger?.finer('Using linker ${configLdUri.toFilePath()} '
@@ -231,16 +232,16 @@ class CompilerResolver {
 
   /// Select the right compiler for cross compiling to the specified target.
   Tool? _selectLinker() {
-    final targetOs = buildConfig.targetOs;
+    final targetOs = buildConfig.targetOS;
     final targetArch = buildConfig.targetArchitecture;
 
     // TODO(dacoharkes): Support falling back on other tools.
-    if (targetArch == host.architecture &&
-        targetOs == host.os &&
-        host.os == OS.linux) return clang;
+    if (targetArch == hostArchitecture &&
+        targetOs == hostOS &&
+        hostOS == OS.linux) return clang;
     if (targetOs == OS.macOS || targetOs == OS.iOS) return appleClang;
     if (targetOs == OS.android) return androidNdkClang;
-    if (host.os == OS.linux) {
+    if (hostOS == OS.linux) {
       switch (targetArch) {
         case Architecture.arm:
           return armLinuxGnueabihfLd;
@@ -255,7 +256,7 @@ class CompilerResolver {
       }
     }
 
-    if (host.os == OS.windows) {
+    if (hostOS == OS.windows) {
       switch (targetArch) {
         case Architecture.ia32:
           return linkIA32;

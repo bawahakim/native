@@ -176,7 +176,7 @@ class CBuilder implements Builder {
 
   CBuilder.link({
     required this.name,
-    required this.assetId,
+    required this.assetName,
     this.sources = const [],
     this.includes = const [],
     this.dartBuildFiles = const ['build.dart'],
