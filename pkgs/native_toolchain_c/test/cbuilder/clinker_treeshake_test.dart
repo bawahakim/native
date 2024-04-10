@@ -24,12 +24,11 @@ void main() {
     name: 'mylibname',
     assetName: 'assetName',
     linkerOptions: LinkerOptions.manual(
-      flags: ['--strip-debug'],
+      flags: ['--strip-debug', '-u', 'my_other_func'],
       linkInput: [Uri.file('test/cbuilder/testfiles/linker/test.a')],
       gcSections: true,
       linkerScript: Uri.file('test/cbuilder/testfiles/linker/symbols.lds'),
     ),
-    flags: ['-u', 'my_other_func'],
   );
   final linkerAuto = CBuilder.link(
     name: 'mylibname',
@@ -116,11 +115,15 @@ Future<BuildOutput> _runBuild(
   final tempUri = await tempDirForTest();
   final buildOutput = BuildOutput();
 
-  final buildConfig = getBuildConfig(
-    tempUri,
-    os,
-    architecture,
-    cCompilerConfig,
+  final buildConfig = BuildConfig.build(
+    outputDirectory: tempUri,
+    packageName: 'testpackage',
+    packageRoot: tempUri,
+    targetArchitecture: architecture,
+    targetOS: os,
+    buildMode: BuildMode.release,
+    linkModePreference: LinkModePreference.dynamic,
+    cCompiler: cCompilerConfig,
   );
   await cbuilder.run(
     buildConfig: buildConfig,
@@ -145,23 +148,4 @@ Future<void> checkResults(BuildOutput buildOutput, int maxSize) async {
   final du = Process.runSync('du', ['-sb', filePath]).stdout as String;
   final sizeInBytes = int.parse(du.split('\t')[0]);
   expect(sizeInBytes, lessThan(maxSize));
-}
-
-BuildConfig getBuildConfig(
-  Uri tempUri,
-  OS target,
-  Architecture architecture,
-  CCompilerConfig cCompilerConfig,
-) {
-  final buildConfig = BuildConfig.build(
-    outputDirectory: tempUri,
-    packageName: 'testpackage',
-    packageRoot: tempUri,
-    targetArchitecture: architecture,
-    targetOS: target,
-    buildMode: BuildMode.release,
-    linkModePreference: LinkModePreference.dynamic,
-    cCompiler: cCompilerConfig,
-  );
-  return buildConfig;
 }

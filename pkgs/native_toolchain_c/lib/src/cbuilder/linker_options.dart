@@ -16,7 +16,7 @@ import '../tool/tool.dart';
 class LinkerOptions {
   /// The flags to be passed to the linker. As they depend on the linker being
   /// invoked, the actual usage is via the [flags] method.
-  final List<String> _flags;
+  final List<String> _linkerFlags;
 
   /// The input files to the linker.
   final List<Uri> linkInput;
@@ -37,7 +37,7 @@ class LinkerOptions {
     List<String>? flags,
     bool? gcSections,
     this.linkerScript,
-  })  : _flags = flags ?? [],
+  })  : _linkerFlags = flags ?? [],
         gcSections = gcSections ?? true;
 
   /// Create linking options to tree-shake symbols from the input files. The
@@ -46,7 +46,7 @@ class LinkerOptions {
     required this.linkInput,
     List<String>? flags,
     required List<String> symbols,
-  })  : _flags = <String>{
+  })  : _linkerFlags = <String>{
           ...flags ?? [],
           '--strip-debug',
           ...symbols.expand((e) => ['-u', e]),
@@ -59,7 +59,7 @@ class LinkerOptions {
   /// Throws if the [linker] is not supported.
   Iterable<String> flags(Tool linker) {
     final flagList = [
-      ..._flags,
+      ..._linkerFlags,
       if (gcSections) '--gc-sections',
       if (linkerScript != null)
         '--version-script=${linkerScript!.toFilePath()}',
