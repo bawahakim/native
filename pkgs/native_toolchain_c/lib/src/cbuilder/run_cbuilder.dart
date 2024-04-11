@@ -176,6 +176,7 @@ class RunCBuilder {
         );
         objectFiles.add(objectFile);
       }
+      //only if wanted
       await runProcess(
         executable: archiver_!,
         arguments: [
