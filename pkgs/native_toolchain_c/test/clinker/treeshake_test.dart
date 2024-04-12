@@ -20,66 +20,71 @@ void main() {
     return;
   }
 
-  final linkerManual = CBuilder.link(
+  final sources = [
+    packageUri.resolve('test/clinker/testfiles/linker/test.a').toFilePath()
+  ];
+  final linkerManual = CLinker(
     name: 'mylibname',
     assetName: 'assetName',
+    sources: sources,
     linkerOptions: LinkerOptions.manual(
       flags: ['--strip-debug', '-u', 'my_other_func'],
-      linkInput: [Uri.file('test/cbuilder/testfiles/linker/test.a')],
       gcSections: true,
-      linkerScript: Uri.file('test/cbuilder/testfiles/linker/symbols.lds'),
+      linkerScript: Uri.file('test/clinker/testfiles/linker/symbols.lds'),
     ),
   );
-  final linkerAuto = CBuilder.link(
+  final linkerAuto = CLinker(
     name: 'mylibname',
     assetName: 'assetName',
-    linkerOptions: LinkerOptions.treeshake(
-      linkInput: [Uri.file('test/cbuilder/testfiles/linker/test.a')],
-      symbols: ['my_other_func'],
-    ),
+    sources: sources,
+    linkerOptions: LinkerOptions.treeshake(symbols: ['my_other_func']),
   );
   const architecture = Architecture.x64;
   const os = OS.linux;
 
   final ldConfig = CCompilerConfig(linker: Uri.file('/usr/bin/ld'));
   final clangConfig = CCompilerConfig(linker: Uri.file('/usr/bin/clang'));
-  for (final cbuilder in [
+  for (final clinker in [
     (name: 'manual', linkerManual),
     (name: 'auto', linkerAuto),
   ]) {
-    for (final entry in [
+    for (final compiler in [
       (config: ldConfig, maxSize: 13760),
       (config: clangConfig, maxSize: 15457),
     ]) {
-      final linkerName = entry.config.linker!.pathSegments.last;
-      test('link test $linkerName with ${cbuilder.name}', () async {
+      final linkerName = compiler.config.linker!.pathSegments.last;
+      test('link test $linkerName with ${clinker.name}', () async {
         final tempUri = await tempDirForTest();
-        final buildOutput = BuildOutput();
+        final linkOutput = LinkOutput();
 
-        final buildConfig = BuildConfig.build(
-          outputDirectory: tempUri,
-          packageName: 'testpackage',
-          packageRoot: tempUri,
-          targetArchitecture: architecture,
-          targetOS: os,
-          buildMode: BuildMode.release,
-          linkModePreference: LinkModePreference.dynamic,
-          cCompiler: entry.config,
+        final config = LinkConfig(
+          resourceIdentifierUri: null,
+          buildConfig: BuildConfig.build(
+            outputDirectory: tempUri,
+            packageName: 'testpackage',
+            packageRoot: tempUri,
+            targetArchitecture: architecture,
+            targetOS: os,
+            buildMode: BuildMode.release,
+            linkModePreference: LinkModePreference.dynamic,
+            cCompiler: compiler.config,
+          ),
+          assetsForLinking: [],
         );
-        await cbuilder.$1.run(
-          buildConfig: buildConfig,
-          buildOutput: buildOutput,
+        await clinker.$1.run(
+          linkConfig: config,
+          linkOutput: linkOutput,
           logger: logger,
         );
 
-        await checkResults(buildOutput, entry.maxSize);
+        await checkResults(linkOutput, compiler.maxSize);
       });
     }
   }
 }
 
-Future<void> checkResults(BuildOutput buildOutput, int maxSize) async {
-  final filePath = buildOutput.assets.first.file!.toFilePath();
+Future<void> checkResults(LinkOutput linkOutput, int maxSize) async {
+  final filePath = linkOutput.assets.first.file!.toFilePath();
 
   final readelf = (await runProcess(
     executable: Uri.file('readelf'),
@@ -87,7 +92,7 @@ Future<void> checkResults(BuildOutput buildOutput, int maxSize) async {
     logger: logger,
   ))
       .stdout;
-  expect(readelf, contains('my_other_func'));
+  expect(readelf, matches(r'[0-9]+\smy_other_func'));
   expect(readelf, isNot(contains('my_func')));
 
   final du = Process.runSync('du', ['-sb', filePath]).stdout as String;

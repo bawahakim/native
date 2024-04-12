@@ -28,38 +28,43 @@ Future<void> main() async {
   for (final cCompilerConfig in [ldConfig, clangConfig]) {
     final linkerName = cCompilerConfig.linker!.pathSegments.last;
     test('link two objects with $linkerName', () async {
-      final buildOutput = BuildOutput();
+      final linkOutput = LinkOutput();
       final tempUri = await tempDirForTest();
 
-      await CBuilder.link(
-        name: name,
-        assetName: 'assetName',
-        linkerOptions: LinkerOptions.manual(
-          linkInput: [
-            Uri.file('test/clinker/testfiles/linker/test1.o'),
-            Uri.file('test/clinker/testfiles/linker/test2.o'),
-          ],
-          gcSections: false,
-        ),
-      ).run(
+      final linkConfig = LinkConfig(
         buildConfig: BuildConfig.build(
           outputDirectory: tempUri,
           packageName: 'testpackage',
           packageRoot: tempUri,
           targetArchitecture: architecture,
           targetOS: os,
-          buildMode: BuildMode.release,
+          buildMode: BuildMode.debug,
           linkModePreference: LinkModePreference.dynamic,
           cCompiler: cCompilerConfig,
         ),
-        buildOutput: buildOutput,
+        assetsForLinking: [],
+        resourceIdentifierUri: null,
+      );
+      await CLinker(
+              name: name,
+              assetName: 'testassetname',
+              linkerOptions: LinkerOptions.manual(gcSections: false),
+              sources: [
+                'test/clinker/testfiles/linker/test1.o',
+                'test/clinker/testfiles/linker/test2.o',
+              ].map((e) => packageUri.resolve(e).toFilePath()).toList())
+          .run(
+        linkConfig: linkConfig,
+        linkOutput: linkOutput,
         logger: logger,
       );
 
-      expect(buildOutput.assets, hasLength(1));
-      final asset = buildOutput.assets.first;
+      expect(linkOutput.assets, hasLength(1));
+      final asset = linkOutput.assets.first;
       expect(asset, isA<NativeCodeAsset>());
-      final filePath = (asset as NativeCodeAsset).file!.toFilePath();
+      final file = (asset as NativeCodeAsset).file;
+      expect(file, isNotNull, reason: 'Asset $asset has a file');
+      final filePath = file!.toFilePath();
       expect(
         filePath,
         endsWith(os.dylibFileName(name)),

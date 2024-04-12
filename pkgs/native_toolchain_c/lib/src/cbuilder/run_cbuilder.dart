@@ -6,7 +6,7 @@ import 'dart:math';
 
 import 'package:logging/logging.dart';
 import 'package:native_assets_cli/native_assets_cli.dart'
-    show Architecture, BuildConfig, IOSSdk, OS;
+    show Architecture, HookConfig, IOSSdk, OS;
 
 import '../native_toolchain/apple_clang.dart';
 import '../native_toolchain/clang.dart';
@@ -21,7 +21,7 @@ import 'language.dart';
 import 'linker_options.dart';
 
 class RunCBuilder {
-  final BuildConfig buildConfig;
+  final HookConfig buildConfig;
   final Logger? logger;
   final List<Uri> sources;
   final List<Uri> includes;
@@ -75,8 +75,12 @@ class RunCBuilder {
     }
   }
 
-  late final _resolver =
-      CompilerResolver(buildConfig: buildConfig, logger: logger);
+  late final _resolver = CompilerResolver(
+    cCompiler: buildConfig.cCompiler,
+    targetArchitecture: buildConfig.targetArchitecture,
+    targetOS: buildConfig.targetOS,
+    logger: logger,
+  );
 
   Future<ToolInstance> compiler() async => await _resolver.resolveCompiler();
 
@@ -281,8 +285,6 @@ class RunCBuilder {
           outFile!.toFilePath(),
         ],
         ...linkerOptions?.flags(compiler.tool) ?? [],
-        if (linkerOptions != null)
-          ...linkerOptions!.linkInput.map((e) => e.toFilePath()),
       ],
       logger: logger,
       captureOutput: false,

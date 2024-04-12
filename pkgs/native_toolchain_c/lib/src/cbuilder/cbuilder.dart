@@ -12,6 +12,8 @@ import 'language.dart';
 import 'linker_options.dart';
 import 'run_cbuilder.dart';
 
+part 'clinker.dart';
+
 abstract class Builder {
   Future<void> run({
     required BuildConfig buildConfig,
@@ -162,6 +164,26 @@ class CBuilder implements Builder {
   })  : _type = _CBuilderType.library,
         linkerOptions = null;
 
+  CBuilder._({
+    required this.name,
+    this.assetName,
+    this.sources = const [],
+    this.includes = const [],
+    required this.dartBuildFiles,
+    @visibleForTesting this.installName,
+    this.flags = const [],
+    this.defines = const {},
+    this.buildModeDefine = true,
+    this.ndebugDefine = true,
+    this.pic = true,
+    this.std,
+    this.language = Language.c,
+    this.cppLinkStdLib,
+    this.linkModePreference,
+    required _CBuilderType type,
+    this.linkerOptions,
+  }) : _type = type;
+
   CBuilder.executable({
     required this.name,
     this.sources = const [],
@@ -182,25 +204,6 @@ class CBuilder implements Builder {
         linkerOptions = null,
         linkModePreference = null;
 
-  CBuilder.link({
-    required this.name,
-    required this.assetName,
-    this.sources = const [],
-    this.includes = const [],
-    this.dartBuildFiles = const ['build.dart'],
-    @visibleForTesting this.installName,
-    this.flags = const [],
-    this.defines = const {},
-    this.pic = true,
-    this.std,
-    this.language = Language.c,
-    this.cppLinkStdLib,
-    required LinkerOptions this.linkerOptions,
-  })  : _type = _CBuilderType.library,
-        buildModeDefine = false,
-        ndebugDefine = false,
-        linkModePreference = null;
-
   /// Runs the C Compiler with on this C build spec.
   ///
   /// Completes with an error if the build fails.
@@ -211,13 +214,44 @@ class CBuilder implements Builder {
     required Logger? logger,
     String? linkInPackage,
   }) async {
-    final outDir = buildConfig.outputDirectory;
-    final packageRoot = buildConfig.packageRoot;
-    await Directory.fromUri(outDir).create(recursive: true);
     final linkMode =
         _linkMode(linkModePreference ?? buildConfig.linkModePreference);
-    final libUri =
-        outDir.resolve(buildConfig.targetOS.libraryFileName(name, linkMode));
+    final libUri = buildConfig.outputDirectory
+        .resolve(buildConfig.targetOS.libraryFileName(name, linkMode));
+    await _run(
+      buildConfig,
+      logger,
+      buildOutput,
+      linkMode,
+      libUri,
+    );
+    if (assetName != null) {
+      buildOutput.addAsset(
+        NativeCodeAsset(
+          package: buildConfig.packageName,
+          name: assetName!,
+          file: libUri,
+          linkMode: linkMode,
+          os: buildConfig.targetOS,
+          architecture:
+              buildConfig.dryRun ? null : buildConfig.targetArchitecture,
+        ),
+        linkInPackage: linkInPackage,
+      );
+    }
+  }
+
+  Future<void> _run(
+    HookConfig buildConfig,
+    Logger? logger,
+    BuildOutput buildOutput,
+    LinkMode linkMode,
+    Uri libUri,
+  ) async {
+    final outDir = buildConfig.outputDirectory;
+    final packageRoot = buildConfig.packageRoot;
+
+    await Directory.fromUri(outDir).create(recursive: true);
     final exeUri =
         outDir.resolve(buildConfig.targetOS.executableFileName(name));
     final sources = [
@@ -263,22 +297,6 @@ class CBuilder implements Builder {
       await task.run();
     }
 
-    if (assetName != null) {
-      buildOutput.addAssets(
-        [
-          NativeCodeAsset(
-            package: buildConfig.packageName,
-            name: assetName!,
-            file: libUri,
-            linkMode: linkMode,
-            os: buildConfig.targetOS,
-            architecture:
-                buildConfig.dryRun ? null : buildConfig.targetArchitecture,
-          )
-        ],
-        linkInPackage: linkInPackage,
-      );
-    }
     if (!buildConfig.dryRun) {
       final includeFiles = await Stream.fromIterable(includes)
           .asyncExpand(

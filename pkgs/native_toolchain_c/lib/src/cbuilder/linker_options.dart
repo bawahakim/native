@@ -18,9 +18,6 @@ class LinkerOptions {
   /// invoked, the actual usage is via the [flags] method.
   final List<String> _linkerFlags;
 
-  /// The input files to the linker.
-  final List<Uri> linkInput;
-
   /// Enable garbage collection of unused input sections.
   ///
   /// See also the `ld` man page at https://linux.die.net/man/1/ld.
@@ -33,7 +30,6 @@ class LinkerOptions {
 
   /// Create linking options manually for fine-grained control.
   LinkerOptions.manual({
-    required this.linkInput,
     List<String>? flags,
     bool? gcSections,
     this.linkerScript,
@@ -43,9 +39,8 @@ class LinkerOptions {
   /// Create linking options to tree-shake symbols from the input files. The
   /// [symbols] specify the symbols which should be kept.
   LinkerOptions.treeshake({
-    required this.linkInput,
-    List<String>? flags,
-    required List<String> symbols,
+    Iterable<String>? flags,
+    required Iterable<String> symbols,
   })  : _linkerFlags = <String>{
           ...flags ?? [],
           '--strip-debug',
@@ -74,7 +69,7 @@ class LinkerOptions {
     }
   }
 
-  static Uri _createLinkerScript(List<String> symbols) {
+  static Uri _createLinkerScript(Iterable<String> symbols) {
     final tempDir = Directory.systemTemp.createTempSync();
     final symbolsFileUri = tempDir.uri.resolve('symbols.lds');
     final symbolsFile = File.fromUri(symbolsFileUri)..createSync();
