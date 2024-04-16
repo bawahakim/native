@@ -40,11 +40,11 @@ class LinkerOptions {
   /// [symbols] specify the symbols which should be kept.
   LinkerOptions.treeshake({
     Iterable<String>? flags,
-    required Iterable<String> symbols,
+    required Iterable<String>? symbols,
   })  : _linkerFlags = <String>{
           ...flags ?? [],
           '--strip-debug',
-          ...symbols.expand((e) => ['-u', e]),
+          if (symbols != null) ...symbols.expand((e) => ['-u', e]),
         }.toList(),
         gcSections = true,
         linkerScript = _createLinkerScript(symbols);
@@ -69,7 +69,8 @@ class LinkerOptions {
     }
   }
 
-  static Uri _createLinkerScript(Iterable<String> symbols) {
+  static Uri? _createLinkerScript(Iterable<String>? symbols) {
+    if (symbols == null) return null;
     final tempDir = Directory.systemTemp.createTempSync();
     final symbolsFileUri = tempDir.uri.resolve('symbols.lds');
     final symbolsFile = File.fromUri(symbolsFileUri)..createSync();
