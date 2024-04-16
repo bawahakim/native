@@ -266,6 +266,7 @@ class RunCBuilder {
           '-l',
           cppLinkStdLib ?? defaultCppLinkStdLib[buildConfig.targetOS]!
         ],
+        ...linkerOptions?.preflags(compiler.tool) ?? [],
         ...flags,
         for (final MapEntry(key: name, :value) in defines.entries)
           if (value == null) '-D$name' else '-D$name=$value',

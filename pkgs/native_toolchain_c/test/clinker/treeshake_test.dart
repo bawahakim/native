@@ -39,6 +39,12 @@ void main() {
     sources: sources,
     linkerOptions: LinkerOptions.treeshake(symbols: ['my_other_func']),
   );
+  final linkerAutoEmpty = CLinker(
+    name: 'mylibname',
+    assetName: 'assetName',
+    sources: sources,
+    linkerOptions: LinkerOptions.treeshake(symbols: null),
+  );
   const architecture = Architecture.x64;
   const os = OS.linux;
 
@@ -47,6 +53,7 @@ void main() {
   for (final clinker in [
     (name: 'manual', linkerManual),
     (name: 'auto', linkerAuto),
+    (name: 'autoEmpty', linkerAutoEmpty),
   ]) {
     for (final compiler in [
       (config: ldConfig, maxSize: 13760),
@@ -76,14 +83,31 @@ void main() {
           linkOutput: linkOutput,
           logger: logger,
         );
+        final (readelf, sizeInBytes) = await elfAndSize(linkOutput);
+        if (clinker.$1 != linkerAutoEmpty) {
+          expect(readelf, matches(r'[0-9]+\smy_other_func'));
+          expect(readelf, isNot(contains('my_func')));
 
-        await checkResults(linkOutput, compiler.maxSize);
+          expect(sizeInBytes, lessThan(compiler.maxSize));
+        } else {
+          expect(readelf, contains('my_other_func'));
+          expect(readelf, contains('my_func'));
+        }
       });
     }
   }
 }
 
 Future<void> checkResults(LinkOutput linkOutput, int maxSize) async {
+  final (readelf, sizeInBytes) = await elfAndSize(linkOutput);
+
+  expect(readelf, matches(r'[0-9]+\smy_other_func'));
+  expect(readelf, isNot(contains('my_func')));
+
+  expect(sizeInBytes, lessThan(maxSize));
+}
+
+Future<(String, int)> elfAndSize(LinkOutput linkOutput) async {
   final filePath = linkOutput.assets.first.file!.toFilePath();
 
   final readelf = (await runProcess(
@@ -92,10 +116,9 @@ Future<void> checkResults(LinkOutput linkOutput, int maxSize) async {
     logger: logger,
   ))
       .stdout;
-  expect(readelf, matches(r'[0-9]+\smy_other_func'));
-  expect(readelf, isNot(contains('my_func')));
 
   final du = Process.runSync('du', ['-sb', filePath]).stdout as String;
   final sizeInBytes = int.parse(du.split('\t')[0]);
-  expect(sizeInBytes, lessThan(maxSize));
+
+  return (readelf, sizeInBytes);
 }
