@@ -98,15 +98,6 @@ void main() {
   }
 }
 
-Future<void> checkResults(LinkOutput linkOutput, int maxSize) async {
-  final (readelf, sizeInBytes) = await elfAndSize(linkOutput);
-
-  expect(readelf, matches(r'[0-9]+\smy_other_func'));
-  expect(readelf, isNot(contains('my_func')));
-
-  expect(sizeInBytes, lessThan(maxSize));
-}
-
 Future<(String, int)> elfAndSize(LinkOutput linkOutput) async {
   final filePath = linkOutput.assets.first.file!.toFilePath();
 
