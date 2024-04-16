@@ -24,7 +24,7 @@ void main(List<String> arguments) async {
       assetName: 'src/${packageName}_bindings.dart',
       linkerOptions: LinkerOptions.treeshake(
           symbols: config.resources
-              .map((resource) => resource.metadata)
+              ?.map((resource) => resource.metadata)
               .map((metadata) => metadata.toString())),
       sources: [staticLibrary.file!.toFilePath()],
     ).run(
