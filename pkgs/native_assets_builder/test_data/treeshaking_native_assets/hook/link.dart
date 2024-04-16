@@ -13,8 +13,8 @@ const packageName = 'treeshaking_native_assets';
 
 void main(List<String> arguments) async {
   await link(arguments, (config, output) async {
-    final staticLibrary =
-        config.assets.firstWhere((asset) => asset.id.endsWith('staticlib'));
+    final staticLibrary = config.assets
+        .firstWhere((asset) => asset.id == 'package:$packageName/staticlib');
     final nameWithoutLibAndSo = path
         .basenameWithoutExtension(placeholderAsset(config).file!.toFilePath())
         .substring(3);
