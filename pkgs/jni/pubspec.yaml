@@ -39,8 +39,8 @@ flutter:
     platforms:
       linux:
         ffiPlugin: true
-      windows:
-        ffiPlugin: true
+      # windows:
+      #   ffiPlugin: false
       android:
         ffiPlugin: true
         package: com.github.dart_lang.jni
